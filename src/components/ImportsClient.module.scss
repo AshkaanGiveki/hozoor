@@ -1,0 +1,1 @@
+.layout{display:grid;grid-template-columns:minmax(300px,.8fr) 1.5fr;gap:18px}.layout h3{margin:0 0 8px}.mapping{display:grid;grid-template-columns:1fr 1fr;gap:10px}.mapping label:last-child{grid-column:1/-1}@media(max-width:900px){.layout{grid-template-columns:1fr}}@media(max-width:500px){.mapping{grid-template-columns:1fr}.mapping label:last-child{grid-column:auto}}

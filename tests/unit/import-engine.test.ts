@@ -1,0 +1,3 @@
+import { describe, expect, it } from "vitest";
+import { parseDelimited, fingerprint } from "@/server/import-engine";
+describe("ورود فایل",()=>{it("CSV canonical را parse می‌کند",()=>{const rows=parseDelimited("employeeCode,timestamp,type\n1001,2025-02-02T09:00:00Z,IN\n1001,2025-02-02T17:00:00Z,OUT",{externalId:"employeeCode",timestamp:"timestamp",type:"type"});expect(rows).toHaveLength(2);expect(rows[0].type).toBe("IN");});it("fingerprint برای رکورد یکسان ثابت است",()=>{const row=parseDelimited("employeeCode,timestamp,type\n1001,2025-02-02T09:00:00Z,IN",{externalId:"employeeCode",timestamp:"timestamp",type:"type"})[0];expect(fingerprint("device",row)).toBe(fingerprint("device",row));});});

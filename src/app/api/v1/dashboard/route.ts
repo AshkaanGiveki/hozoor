@@ -1,0 +1,5 @@
+import { NextResponse } from "next/server";
+import { getCurrentUser } from "@/server/auth";
+import { db } from "@/server/db";
+import { employeeScopeWhere } from "@/server/permissions";
+export async function GET() { const user = await getCurrentUser(); if (!user) return NextResponse.json({ error:{ code:"UNAUTHENTICATED", message:"نیاز به ورود دارید." } },{status:401}); const scope=await employeeScopeWhere(user); const today=new Date(); today.setHours(0,0,0,0); const [days,pending,employees,notifications] = await Promise.all([db.attendanceDay.findMany({ where:{ companyId:user.companyId, employeeId: user.employee?.id ?? undefined, date: today }, include:{employee:true} }), db.leaveRequest.count({where:{companyId:user.companyId,status:{in:["SUBMITTED","PENDING_MANAGER","PENDING_ADMIN"]},employee:scope}}), db.employee.count({where:scope}), db.notification.findMany({where:{userId:user.id},orderBy:{createdAt:"desc"},take:5})]); return NextResponse.json({data:{days,pending,employees,notifications}}); }

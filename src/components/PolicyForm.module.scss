@@ -1,0 +1,9 @@
+.form { padding-top: 22px; }
+.formGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.formGrid label { display: grid; gap: 7px; color: var(--color-text-secondary); font-size: 12px; font-weight: 600; }
+.formGrid input, .formGrid select { width: 100%; min-height: 42px; padding: 0 12px; border: 1px solid var(--color-border-primary); border-radius: 8px; outline: none; background: var(--color-bg-primary); color: var(--color-text-primary); font: inherit; font-size: 13px; transition: border-color .18s ease, box-shadow .18s ease; }
+.formGrid input:focus, .formGrid select:focus { border-color: var(--color-brand-primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-brand-primary) 14%, transparent); }
+.footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-top: 22px; }
+.footer p { margin: 0; color: var(--color-text-tertiary); font-size: 11px; }
+.message { margin-top: 14px; padding: 10px 12px; border: 1px solid color-mix(in srgb, var(--color-success) 35%, var(--color-border-secondary)); border-radius: 8px; background: color-mix(in srgb, var(--color-success) 9%, transparent); color: var(--color-success); font-size: 12px; }
+@media (max-width: 620px) { .formGrid { grid-template-columns: 1fr; } .footer { align-items: flex-start; flex-direction: column; } .footer .button { width: 100%; } }
