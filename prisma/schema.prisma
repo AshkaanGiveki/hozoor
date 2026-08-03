@@ -1,0 +1,751 @@
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "postgresql"
+  url = env("DATABASE_URL")
+}
+
+enum RoleCode {
+ADMIN
+HR_ADMIN
+MANAGER
+EMPLOYEE
+AUDITOR
+}
+enum UserStatus {
+ACTIVE
+INACTIVE
+LOCKED
+}
+enum EventType {
+IN
+OUT
+BREAK_START
+BREAK_END
+UNKNOWN
+}
+enum ImportStatus {
+PREVIEW
+VALIDATING
+COMPLETED
+FAILED
+}
+enum DayStatus {
+PRESENT
+INSUFFICIENT_TIME
+ABSENT
+ON_LEAVE
+PARTIAL_LEAVE
+OFF_TIME
+PARTIAL_OFF_TIME
+HOLIDAY
+WEEKLY_OFF
+MISSION
+REMOTE_WORK
+TRAINING
+INCOMPLETE
+NOT_SCHEDULED
+}
+enum RequestStatus {
+DRAFT
+SUBMITTED
+PENDING_MANAGER
+PENDING_ADMIN
+APPROVED
+REJECTED
+CANCELLED
+}
+enum RequestKind {
+LEAVE
+OFF_TIME
+CORRECTION
+LATE_PERMISSION
+EARLY_DEPARTURE
+}
+enum LeaveUnit {
+DAY
+HOUR
+}
+enum OvertimeMode {
+DISABLED
+AUTOMATIC
+APPROVAL_REQUIRED
+SCHEDULED_ONLY
+}
+enum PolicyStatus {
+DRAFT
+ACTIVE
+ARCHIVED
+}
+enum LedgerType {
+OPENING
+ACCRUAL
+MANUAL_ADJUSTMENT
+REQUEST_RESERVED
+REQUEST_RELEASED
+REQUEST_CONSUMED
+CARRYOVER
+EXPIRATION
+CANCELLATION
+}
+
+model CompanyProfile {
+  id String @id @default(uuid())
+  name String
+  legalName String?
+  timezone String @default("Asia/Tehran")
+  address String?
+  phone String?
+  email String?
+  language String @default("fa")
+  weekStartsOn Int @default(6)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  settings CompanySetting[]
+  users User[]
+  departments Department[]
+  teams Team[]
+  policies AttendancePolicy[]
+  schedules WorkScheduleTemplate[]
+  devices AttendanceDevice[]
+  imports ImportJob[]
+  rawEvents RawAttendanceEvent[]
+  attendanceDays AttendanceDay[]
+  leaveTypes LeaveType[]
+  leavePolicies LeavePolicy[]
+  leaveRequests LeaveRequest[]
+  offTimeRequests OffTimeRequest[]
+  correctionRequests AttendanceCorrectionRequest[]
+  employees Employee[]
+  holidays Holiday[]
+  approvalWorkflows ApprovalWorkflow[]
+  attachments FileAttachment[]
+  reportExports ReportExport[]
+  notifications Notification[]
+  auditLogs AuditLog[]
+}
+
+model CompanySetting {
+id String @id @default(uuid())
+companyId String
+key String
+value String
+company CompanyProfile @relation(fields:[companyId], references:[id], onDelete:Cascade)
+@@unique([companyId,key])
+}
+model User {
+  id String @id @default(uuid())
+  companyId String
+  username String
+  passwordHash String
+  firstName String
+  lastName String
+  status UserStatus @default(ACTIVE)
+  role RoleCode @default(EMPLOYEE)
+  mustChangePassword Boolean @default(true)
+  failedLoginCount Int @default(0)
+  lockedUntil DateTime?
+  lastLoginAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  company CompanyProfile @relation(fields:[companyId], references:[id], onDelete:Cascade)
+  employee Employee?
+  sessions Session[]
+  passwordHistory PasswordHistory[]
+  createdEmployees Employee[] @relation("EmployeeCreator")
+  managerAssignments ManagerAssignment[] @relation("Manager")
+  approvals ApprovalDecision[]
+  notifications Notification[]
+  auditLogs AuditLog[]
+  createdPolicies AttendancePolicy[]
+  createdImports ImportJob[]
+  exports ReportExport[]
+  savedFilters SavedReportFilter[]
+  @@unique([companyId,username])
+  @@index([companyId,role])
+}
+model Session {
+id String @id @default(uuid())
+userId String
+tokenHash String @unique
+expiresAt DateTime
+createdAt DateTime @default(now())
+lastUsedAt DateTime @default(now())
+user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+@@index([userId,expiresAt])
+}
+model PasswordHistory {
+id String @id @default(uuid())
+userId String
+passwordHash String
+createdAt DateTime @default(now())
+user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+@@index([userId])
+}
+model LoginAttempt {
+id String @id @default(uuid())
+username String
+success Boolean
+ipAddress String?
+createdAt DateTime @default(now())
+@@index([username,createdAt])
+}
+
+model Department {
+id String @id @default(uuid())
+companyId String
+name String
+code String?
+active Boolean @default(true)
+company CompanyProfile @relation(fields:[companyId],references:[id],onDelete:Cascade)
+teams Team[]
+employees Employee[]
+policyAssignments PolicyAssignment[]
+@@unique([companyId,name])
+}
+model Team {
+id String @id @default(uuid())
+companyId String
+departmentId String?
+name String
+active Boolean @default(true)
+company CompanyProfile @relation(fields:[companyId],references:[id],onDelete:Cascade)
+department Department? @relation(fields:[departmentId],references:[id],onDelete:SetNull)
+employees Employee[]
+assignments ManagerAssignment[]
+policyAssignments PolicyAssignment[]
+@@unique([companyId,name])
+}
+model Employee {
+  id String @id @default(uuid())
+companyId String
+userId String? @unique
+employeeCode String
+firstName String
+lastName String
+phone String?
+email String?
+deviceIdentifier String?
+externalIdentifiers Json?
+active Boolean @default(true)
+employmentStart DateTime
+employmentEnd DateTime?
+departmentId String?
+teamId String?
+managerId String?
+createdById String?
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+  company CompanyProfile @relation(fields:[companyId],references:[id],onDelete:Cascade)
+user User? @relation(fields:[userId],references:[id],onDelete:SetNull)
+department Department? @relation(fields:[departmentId],references:[id],onDelete:SetNull)
+team Team? @relation(fields:[teamId],references:[id],onDelete:SetNull)
+manager Employee? @relation("EmployeeManager",fields:[managerId],references:[id],onDelete:SetNull)
+reports Employee[] @relation("EmployeeManager")
+  createdBy User? @relation("EmployeeCreator",fields:[createdById],references:[id],onDelete:SetNull)
+  employmentPeriods EmploymentPeriod[]
+  scheduleAssignments ScheduleAssignment[]
+policyAssignments PolicyAssignment[]
+rawEvents RawAttendanceEvent[]
+attendanceDays AttendanceDay[]
+leaveBalances LeaveBalance[]
+leaveRequests LeaveRequest[]
+offTimeRequests OffTimeRequest[]
+correctionRequests AttendanceCorrectionRequest[]
+deviceMappings DeviceEmployeeMapping[]
+notifications Notification[]
+@@unique([companyId,employeeCode])
+@@index([companyId,teamId,managerId])
+}
+model ManagerAssignment {
+id String @id @default(uuid())
+managerId String
+teamId String
+startDate DateTime
+endDate DateTime?
+manager User @relation("Manager",fields:[managerId],references:[id],onDelete:Cascade)
+team Team @relation(fields:[teamId],references:[id],onDelete:Cascade)
+@@index([managerId,teamId])
+}
+model EmploymentPeriod {
+id String @id @default(uuid())
+employeeId String
+startDate DateTime
+endDate DateTime?
+title String?
+employee Employee @relation(fields:[employeeId],references:[id],onDelete:Cascade)
+}
+
+model AttendancePolicy {
+id String @id @default(uuid())
+companyId String
+name String
+version Int
+effectiveFrom DateTime
+effectiveTo DateTime?
+status PolicyStatus @default(DRAFT)
+minimumDailyMinutes Int @default(450)
+graceMinutes Int @default(0)
+overtimeMode OvertimeMode @default(DISABLED)
+maxDailyOvertimeMinutes Int?
+maxMonthlyOvertimeMinutes Int?
+overtimeRoundingMinutes Int @default(1)
+requireOvertimeApproval Boolean @default(false)
+deductBreakMinutes Int @default(0)
+notes String?
+createdById String?
+createdAt DateTime @default(now())
+company CompanyProfile @relation(fields:[companyId],references:[id],onDelete:Cascade)
+createdBy User? @relation(fields:[createdById],references:[id],onDelete:SetNull)
+dailyRules DailyWorkRule[]
+policyAssignments PolicyAssignment[]
+attendanceDays AttendanceDay[]
+@@unique([companyId,name,version])
+@@index([companyId,effectiveFrom,effectiveTo])
+}
+model DailyWorkRule {
+id String @id @default(uuid())
+policyId String
+weekday Int
+isWorkingDay Boolean @default(true)
+startMinutes Int?
+endMinutes Int?
+flexibleEntryUntil Int?
+flexibleExitFrom Int?
+requiredMinutes Int @default(0)
+minimumMinutes Int?
+breakMinutes Int @default(0)
+paidBreak Boolean @default(false)
+allowPreShiftOvertime Boolean @default(false)
+allowPostShiftOvertime Boolean @default(true)
+policy AttendancePolicy @relation(fields:[policyId],references:[id],onDelete:Cascade)
+@@unique([policyId,weekday])
+}
+model PolicyAssignment {
+id String @id @default(uuid())
+policyId String
+employeeId String?
+departmentId String?
+teamId String?
+startDate DateTime
+endDate DateTime?
+policy AttendancePolicy @relation(fields:[policyId],references:[id],onDelete:Cascade)
+employee Employee? @relation(fields:[employeeId],references:[id],onDelete:Cascade)
+department Department? @relation(fields:[departmentId],references:[id],onDelete:Cascade)
+team Team? @relation(fields:[teamId],references:[id],onDelete:Cascade)
+@@index([employeeId,startDate])
+@@index([teamId,startDate])
+@@index([departmentId,startDate])
+}
+model WorkScheduleTemplate {
+id String @id @default(uuid())
+companyId String
+name String
+description String?
+active Boolean @default(true)
+company CompanyProfile @relation(fields:[companyId],references:[id],onDelete:Cascade)
+assignments ScheduleAssignment[]
+shifts ShiftTemplate[]
+}
+model ScheduleAssignment {
+id String @id @default(uuid())
+employeeId String
+scheduleId String
+startDate DateTime
+endDate DateTime?
+employee Employee @relation(fields:[employeeId],references:[id],onDelete:Cascade)
+schedule WorkScheduleTemplate @relation(fields:[scheduleId],references:[id],onDelete:Cascade)
+@@index([employeeId,startDate])
+}
+model ShiftTemplate {
+id String @id @default(uuid())
+scheduleId String
+name String
+startMinutes Int
+endMinutes Int
+overnight Boolean @default(false)
+schedule WorkScheduleTemplate @relation(fields:[scheduleId],references:[id],onDelete:Cascade)
+}
+model Holiday {
+id String @id @default(uuid())
+companyId String
+date DateTime
+title String
+company CompanyProfile @relation(fields:[companyId],references:[id],onDelete:Cascade)
+@@unique([companyId,date])
+}
+
+model AttendanceDevice {
+id String @id @default(uuid())
+companyId String
+name String
+type String
+timezone String @default("Asia/Tehran")
+active Boolean @default(true)
+company CompanyProfile @relation(fields:[companyId],references:[id],onDelete:Cascade)
+mappings DeviceEmployeeMapping[]
+imports ImportJob[]
+rawEvents RawAttendanceEvent[]
+}
+model DeviceEmployeeMapping {
+id String @id @default(uuid())
+deviceId String
+employeeId String
+externalId String
+lastSeenAt DateTime?
+device AttendanceDevice @relation(fields:[deviceId],references:[id],onDelete:Cascade)
+employee Employee @relation(fields:[employeeId],references:[id],onDelete:Cascade)
+@@unique([deviceId,externalId])
+@@unique([deviceId,employeeId])
+}
+model ImportProfile {
+id String @id @default(uuid())
+name String
+adapterId String
+mapping Json
+dateFormat String
+timeFormat String
+createdAt DateTime @default(now())
+imports ImportJob[]
+}
+model ImportJob {
+id String @id @default(uuid())
+companyId String
+deviceId String
+profileId String?
+createdById String
+filename String
+adapterId String
+status ImportStatus @default(PREVIEW)
+rowCount Int @default(0)
+importedCount Int @default(0)
+duplicateCount Int @default(0)
+errorCount Int @default(0)
+affectedFrom DateTime?
+affectedTo DateTime?
+createdAt DateTime @default(now())
+completedAt DateTime?
+company CompanyProfile @relation(fields:[companyId],references:[id],onDelete:Cascade)
+device AttendanceDevice @relation(fields:[deviceId],references:[id],onDelete:Cascade)
+profile ImportProfile? @relation(fields:[profileId],references:[id],onDelete:SetNull)
+createdBy User @relation(fields:[createdById],references:[id],onDelete:Restrict)
+rawEvents RawAttendanceEvent[]
+errors ImportRowError[]
+@@index([companyId,createdAt])
+}
+model ImportRowError {
+id String @id @default(uuid())
+importJobId String
+rowNumber Int
+message String
+rawData Json?
+importJob ImportJob @relation(fields:[importJobId],references:[id],onDelete:Cascade)
+}
+model RawAttendanceEvent {
+id String @id @default(uuid())
+companyId String
+deviceId String
+employeeId String?
+importJobId String?
+externalId String?
+timestamp DateTime
+type EventType @default(UNKNOWN)
+fingerprint String @unique
+sourceRow Int?
+sourceData Json?
+createdAt DateTime @default(now())
+company CompanyProfile @relation(fields:[companyId],references:[id],onDelete:Cascade)
+device AttendanceDevice @relation(fields:[deviceId],references:[id],onDelete:Cascade)
+employee Employee? @relation(fields:[employeeId],references:[id],onDelete:SetNull)
+importJob ImportJob? @relation(fields:[importJobId],references:[id],onDelete:SetNull)
+@@index([employeeId,timestamp])
+@@index([companyId,timestamp])
+}
+
+model AttendanceDay {
+id String @id @default(uuid())
+companyId String
+employeeId String
+date DateTime
+policyId String?
+status DayStatus
+scheduledStartMinutes Int?
+scheduledEndMinutes Int?
+requiredMinutes Int @default(0)
+minimumMinutes Int @default(0)
+firstIn DateTime?
+lastOut DateTime?
+rawPresenceMinutes Int @default(0)
+validWorkMinutes Int @default(0)
+breakMinutes Int @default(0)
+lateMinutes Int @default(0)
+earlyDepartureMinutes Int @default(0)
+deficitMinutes Int @default(0)
+rawOvertimeMinutes Int @default(0)
+calculatedOvertimeMinutes Int @default(0)
+approvedOvertimeMinutes Int @default(0)
+leaveMinutes Int @default(0)
+offTimeMinutes Int @default(0)
+anomalies String[]
+notes String?
+calculatedAt DateTime @default(now())
+company CompanyProfile @relation(fields:[companyId],references:[id],onDelete:Cascade)
+employee Employee @relation(fields:[employeeId],references:[id],onDelete:Cascade)
+  policy AttendancePolicy? @relation(fields:[policyId],references:[id],onDelete:SetNull)
+  sessions AttendanceSession[]
+  anomalyRecords AttendanceAnomaly[]
+@@unique([employeeId,date])
+@@index([companyId,date,status])
+}
+model AttendanceSession {
+id String @id @default(uuid())
+attendanceDayId String
+startAt DateTime
+endAt DateTime?
+durationMinutes Int @default(0)
+attendanceDay AttendanceDay @relation(fields:[attendanceDayId],references:[id],onDelete:Cascade)
+}
+model AttendanceAnomaly {
+id String @id @default(uuid())
+attendanceDayId String
+code String
+message String
+attendanceDay AttendanceDay @relation(fields:[attendanceDayId],references:[id],onDelete:Cascade)
+}
+
+model LeaveType {
+id String @id @default(uuid())
+companyId String
+name String
+unit LeaveUnit
+paid Boolean @default(true)
+requiresAttachment Boolean @default(false)
+active Boolean @default(true)
+legalNote String?
+company CompanyProfile @relation(fields:[companyId],references:[id],onDelete:Cascade)
+policies LeavePolicy[]
+  requests LeaveRequest[]
+  balances LeaveBalance[]
+@@unique([companyId,name])
+}
+model LeavePolicy {
+id String @id @default(uuid())
+companyId String
+leaveTypeId String
+annualMinutes Int @default(0)
+carryoverMinutes Int @default(0)
+company CompanyProfile @relation(fields:[companyId],references:[id],onDelete:Cascade)
+leaveType LeaveType @relation(fields:[leaveTypeId],references:[id],onDelete:Cascade)
+rules LeavePolicyRule[]
+}
+model LeavePolicyRule {
+id String @id @default(uuid())
+policyId String
+role String?
+minMonths Int @default(0)
+annualMinutes Int
+policy LeavePolicy @relation(fields:[policyId],references:[id],onDelete:Cascade)
+}
+model LeaveBalance {
+id String @id @default(uuid())
+employeeId String
+leaveTypeId String
+year Int
+openingMinutes Int @default(0)
+employee Employee @relation(fields:[employeeId],references:[id],onDelete:Cascade)
+leaveType LeaveType @relation(fields:[leaveTypeId],references:[id],onDelete:Cascade)
+transactions LeaveBalanceTransaction[]
+@@unique([employeeId,leaveTypeId,year])
+}
+model LeaveBalanceTransaction {
+id String @id @default(uuid())
+balanceId String
+type LedgerType
+minutes Int
+referenceId String?
+description String?
+createdAt DateTime @default(now())
+balance LeaveBalance @relation(fields:[balanceId],references:[id],onDelete:Cascade)
+}
+model LeaveRequest {
+id String @id @default(uuid())
+companyId String
+employeeId String
+leaveTypeId String
+status RequestStatus @default(SUBMITTED)
+startDate DateTime
+endDate DateTime
+startMinutes Int?
+endMinutes Int?
+requestedMinutes Int
+reason String
+description String?
+attachmentId String?
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+company CompanyProfile @relation(fields:[companyId],references:[id],onDelete:Cascade)
+employee Employee @relation(fields:[employeeId],references:[id],onDelete:Cascade)
+leaveType LeaveType @relation(fields:[leaveTypeId],references:[id],onDelete:Restrict)
+approval ApprovalInstance?
+@@index([employeeId,status])
+@@index([companyId,startDate,endDate])
+}
+model OffTimeRequest {
+id String @id @default(uuid())
+companyId String
+employeeId String
+kind RequestKind @default(OFF_TIME)
+status RequestStatus @default(SUBMITTED)
+date DateTime
+startMinutes Int
+endMinutes Int
+requestedMinutes Int
+reason String
+description String?
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+company CompanyProfile @relation(fields:[companyId],references:[id],onDelete:Cascade)
+employee Employee @relation(fields:[employeeId],references:[id],onDelete:Cascade)
+approval ApprovalInstance?
+@@index([employeeId,date,status])
+}
+model AttendanceCorrectionRequest {
+id String @id @default(uuid())
+companyId String
+employeeId String
+status RequestStatus @default(SUBMITTED)
+date DateTime
+proposedIn DateTime?
+proposedOut DateTime?
+reason String
+description String?
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+company CompanyProfile @relation(fields:[companyId],references:[id],onDelete:Cascade)
+employee Employee @relation(fields:[employeeId],references:[id],onDelete:Cascade)
+items AttendanceCorrectionItem[]
+approval ApprovalInstance?
+@@index([employeeId,date,status])
+}
+model AttendanceCorrectionItem {
+id String @id @default(uuid())
+requestId String
+eventType EventType
+existingAt DateTime?
+proposedAt DateTime?
+request AttendanceCorrectionRequest @relation(fields:[requestId],references:[id],onDelete:Cascade)
+}
+
+model ApprovalWorkflow {
+id String @id @default(uuid())
+companyId String
+name String
+kind RequestKind
+active Boolean @default(true)
+steps ApprovalWorkflowStep[]
+instances ApprovalInstance[]
+company CompanyProfile @relation(fields:[companyId],references:[id],onDelete:Cascade)
+}
+model ApprovalWorkflowStep {
+id String @id @default(uuid())
+workflowId String
+order Int
+role RoleCode
+required Boolean @default(true)
+workflow ApprovalWorkflow @relation(fields:[workflowId],references:[id],onDelete:Cascade)
+@@unique([workflowId,order])
+}
+model ApprovalInstance {
+id String @id @default(uuid())
+workflowId String
+leaveRequestId String? @unique
+offTimeRequestId String? @unique
+correctionRequestId String? @unique
+currentOrder Int @default(1)
+completed Boolean @default(false)
+workflow ApprovalWorkflow @relation(fields:[workflowId],references:[id],onDelete:Restrict)
+leaveRequest LeaveRequest? @relation(fields:[leaveRequestId],references:[id],onDelete:Cascade)
+offTimeRequest OffTimeRequest? @relation(fields:[offTimeRequestId],references:[id],onDelete:Cascade)
+correctionRequest AttendanceCorrectionRequest? @relation(fields:[correctionRequestId],references:[id],onDelete:Cascade)
+decisions ApprovalDecision[]
+}
+model ApprovalDecision {
+id String @id @default(uuid())
+instanceId String
+approverId String
+order Int
+approved Boolean
+comment String?
+createdAt DateTime @default(now())
+instance ApprovalInstance @relation(fields:[instanceId],references:[id],onDelete:Cascade)
+approver User @relation(fields:[approverId],references:[id],onDelete:Restrict)
+@@unique([instanceId,order,approverId])
+}
+
+model Notification {
+id String @id @default(uuid())
+companyId String
+userId String
+employeeId String?
+title String
+body String
+href String?
+readAt DateTime?
+createdAt DateTime @default(now())
+company CompanyProfile @relation(fields:[companyId],references:[id],onDelete:Cascade)
+user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+employee Employee? @relation(fields:[employeeId],references:[id],onDelete:SetNull)
+@@index([userId,readAt,createdAt])
+}
+model AuditLog {
+id String @id @default(uuid())
+companyId String
+actorId String?
+action String
+entityType String
+entityId String?
+requestId String?
+ipAddress String?
+userAgent String?
+before Json?
+after Json?
+createdAt DateTime @default(now())
+company CompanyProfile @relation(fields:[companyId],references:[id],onDelete:Cascade)
+actor User? @relation(fields:[actorId],references:[id],onDelete:SetNull)
+@@index([companyId,createdAt])
+@@index([entityType,entityId])
+}
+model FileAttachment {
+id String @id @default(uuid())
+companyId String
+originalName String
+storageName String
+mimeType String
+size Int
+createdAt DateTime @default(now())
+company CompanyProfile @relation(fields:[companyId],references:[id],onDelete:Cascade)
+}
+model ReportExport {
+id String @id @default(uuid())
+companyId String
+createdById String
+reportType String
+filename String
+storageName String
+filters Json
+createdAt DateTime @default(now())
+expiresAt DateTime?
+company CompanyProfile @relation(fields:[companyId],references:[id],onDelete:Cascade)
+createdBy User @relation(fields:[createdById],references:[id],onDelete:Restrict)
+}
+model SavedReportFilter {
+id String @id @default(uuid())
+userId String
+name String
+reportType String
+filters Json
+createdAt DateTime @default(now())
+user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+}
+

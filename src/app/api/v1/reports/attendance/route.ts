@@ -1,0 +1,4 @@
+import { NextResponse } from "next/server";
+import { getCurrentUser } from "@/server/auth";
+import { employeeReport, reportCsv } from "@/server/reporting";
+export async function GET(request:Request){const user=await getCurrentUser();if(!user||!["ADMIN","HR_ADMIN","MANAGER","AUDITOR"].includes(user.role))return NextResponse.json({error:{code:"FORBIDDEN",message:"دسترسی کافی ندارید."}},{status:403});const url=new URL(request.url);const from=new Date(url.searchParams.get("from")||new Date(Date.now()-30*86400000).toISOString());const to=new Date(url.searchParams.get("to")||new Date().toISOString());const rows=await employeeReport(user,from,to,url.searchParams.get("employeeId")||undefined);if(url.searchParams.get("format")==="csv")return new NextResponse("\uFEFF"+reportCsv(rows),{headers:{"Content-Type":"text/csv; charset=utf-8","Content-Disposition":"attachment; filename=hozoor-attendance.csv"}});return NextResponse.json({data:rows,meta:{from,to,count:rows.length}});}

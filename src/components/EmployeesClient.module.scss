@@ -1,0 +1,1 @@
+.layout{display:grid;grid-template-columns:minmax(300px,.75fr) 1.6fr;gap:18px}.layout h3{margin:0}.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media(max-width:950px){.layout{grid-template-columns:1fr}}@media(max-width:500px){.two{grid-template-columns:1fr}}

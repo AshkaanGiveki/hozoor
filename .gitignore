@@ -1,0 +1,13 @@
+node_modules
+.next
+coverage
+.env
+data
+playwright-report
+test-results
+.git-hozoor
+.pnpm-store
+dev-server.log
+dev-server-error.log
+tsconfig.tsbuildinfo
+sidebar-*.png

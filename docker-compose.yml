@@ -1,0 +1,48 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: hozoor
+      POSTGRES_PASSWORD: hozoor
+      POSTGRES_DB: hozoor
+    volumes:
+      - hozoor-postgres:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:${DB_PORT:-5433}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hozoor -d hozoor"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+  app:
+    build: .
+    environment:
+      DATABASE_URL: postgresql://hozoor:hozoor@db:5432/hozoor?schema=public
+      SESSION_SECRET: ${SESSION_SECRET:-development-secret-change-me-please-32}
+      NODE_ENV: ${NODE_ENV:-production}
+      APP_URL: ${APP_URL:-http://localhost:3000}
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
+      BOOTSTRAP_ADMIN_USERNAME: ${BOOTSTRAP_ADMIN_USERNAME:-admin}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-ChangeMe123!}
+      BOOTSTRAP_ADMIN_FIRST_NAME: ${BOOTSTRAP_ADMIN_FIRST_NAME:-مدیر}
+      BOOTSTRAP_ADMIN_LAST_NAME: ${BOOTSTRAP_ADMIN_LAST_NAME:-سامانه}
+      FORCE_BOOTSTRAP_PASSWORD_CHANGE: ${FORCE_BOOTSTRAP_PASSWORD_CHANGE:-true}
+      UPLOAD_DIR: /app/data/uploads
+      MAX_IMPORT_BYTES: 10485760
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    volumes:
+      - hozoor-files:/app/data
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://localhost:3000/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+volumes:
+  hozoor-postgres:
+  hozoor-files:

@@ -1,0 +1,133 @@
+.calendarShell{background:var(--color-bg-primary);border:1px solid var(--color-border-primary);border-radius:14px;box-shadow:0 1px 2px #1018280d;overflow:hidden}.calendarTopbar{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:22px 24px;border-bottom:1px solid var(--color-border-primary)}.titleBlock{display:flex;align-items:center;gap:12px}.calendarIcon{display:grid;place-items:center;width:42px;height:42px;border:1px solid #d6bbfb;background:#f4f3ff;color:#6941c6;border-radius:10px;font-size:21px}.titleBlock h2{font-size:16px;margin:0;color:var(--color-text-primary)}.titleBlock p{font-size:12px;color:var(--color-text-tertiary);margin:4px 0 0}.toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.navigation,.viewSwitch{display:inline-flex;align-items:center;border:1px solid var(--color-border-primary);border-radius:8px;background:var(--color-bg-primary);padding:3px}.navigation button,.viewSwitch button{border:0;background:transparent;color:var(--color-text-secondary);height:32px;padding:0 11px;border-radius:6px;font:inherit;font-size:12px}.navigation button:first-child,.navigation button:last-child{font-size:22px;line-height:1;color:var(--color-text-primary);padding:0 8px}.navigation button:hover,.viewSwitch button:hover{background:var(--color-bg-tertiary)}.navigation .todayButton{border-right:1px solid var(--color-border-primary);border-left:1px solid var(--color-border-primary);border-radius:0;font-weight:700}.viewSwitch button{min-width:58px}.viewSwitch .activeView{background:#f4f3ff;color:#6941c6;font-weight:700}.calendarBody{display:grid;grid-template-columns:minmax(0,1fr) 300px;direction:ltr}.calendarMain{min-width:0;direction:rtl;padding:20px 24px 24px}.detailsPanel{border-right:1px solid var(--color-border-primary);direction:rtl;padding:24px;background:var(--color-bg-secondary);min-height:610px}.legend{display:flex;align-items:center;gap:18px;flex-wrap:wrap;color:var(--color-text-secondary);font-size:11px;margin-bottom:18px}.legend span{display:inline-flex;align-items:center;gap:7px}.legend i{width:8px;height:8px;border-radius:50%;display:block}.workedDot{background:#12b76a}.approvedDot{background:#6172f3}.warningDot{background:#f79009}.monthGrid{display:grid;grid-template-columns:repeat(7,minmax(88px,1fr));border-top:1px solid var(--color-border-primary);border-right:1px solid var(--color-border-primary);border-radius:8px 8px 0 0;overflow:hidden}.weekday{background:var(--color-bg-tertiary);border-left:1px solid var(--color-border-primary);border-bottom:1px solid var(--color-border-primary);padding:10px 12px;color:var(--color-text-tertiary);font-size:11px;font-weight:700;text-align:right}.dayCell{position:relative;display:flex;align-items:flex-start;flex-direction:column;gap:8px;min-height:92px;padding:11px 12px;border:0;border-left:1px solid var(--color-border-primary);border-bottom:1px solid var(--color-border-primary);background:var(--color-bg-primary);text-align:right;color:var(--color-text-primary);font:inherit;transition:background .16s,box-shadow .16s}.dayCell:hover{background:var(--color-bg-tertiary)}.dayCell.outside{background:color-mix(in srgb,var(--color-bg-tertiary) 42%,var(--color-bg-primary));color:var(--color-text-tertiary)}.dayCell.selected{box-shadow:inset 0 0 0 2px #7f56d9;background:#fbfaff;z-index:1}.dayNumber{font-size:13px;font-weight:700}.todayNumber{display:grid;place-items:center;width:25px;height:25px;background:#7f56d9;color:white;border-radius:50%}.dayMarker{display:block;width:100%;padding:5px 7px;border-radius:5px;font-size:10px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right}.dayCell small{font-size:10px;color:var(--color-text-tertiary);direction:ltr}.worked{background:#ecfdf3;color:#027a48}.approved{background:#eef4ff;color:#3538cd}.warning{background:#fffaeb;color:#b54708}.neutral{background:var(--color-bg-tertiary);color:var(--color-text-secondary)}.weekGrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border:1px solid var(--color-border-primary);border-radius:8px;overflow:hidden}.dayColumn{display:flex;align-items:center;flex-direction:column;gap:10px;min-height:320px;padding:16px 10px;border:0;border-left:1px solid var(--color-border-primary);background:var(--color-bg-primary);color:var(--color-text-primary);font:inherit}.dayColumn:last-child{border-left:0}.dayColumn:hover,.selectedColumn{background:#fbfaff}.selectedColumn{box-shadow:inset 0 -3px 0 #7f56d9}.columnDate{font-size:11px;color:var(--color-text-tertiary)}.dayColumn>strong{font-size:23px}.columnRule{height:1px;width:100%;background:var(--color-border-secondary);margin:5px 0 10px}.statusPill{font-size:10px;padding:5px 7px;border-radius:5px;font-weight:700}.columnTime{font-size:10px;color:var(--color-text-secondary);direction:rtl;text-align:center;line-height:1.8}.columnDuration{font-size:18px;font-weight:800;direction:ltr}.noRecord{font-size:11px;color:var(--color-text-tertiary);margin-top:35px}.largeDay{min-height:370px;max-width:360px;margin:auto}.detailsHeader{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding-bottom:20px;border-bottom:1px solid var(--color-border-primary)}.detailsHeader p{color:var(--color-text-tertiary);font-size:11px;margin:0 0 6px}.detailsHeader h3{font-size:14px;line-height:1.8;margin:0}.dateBadge{display:grid;place-items:center;width:40px;height:40px;border-radius:9px;background:#f4f3ff;color:#6941c6;font-size:16px;font-weight:800}.detailStatus{display:flex;align-items:center;gap:9px;margin:20px 0 14px;padding:11px;border-radius:8px}.statusIndicator{width:8px;height:8px;border-radius:50%;background:currentColor}.detailStatus strong,.detailStatus small{display:block}.detailStatus strong{font-size:12px}.detailStatus small{font-size:10px;margin-top:4px;opacity:.85}.punchCard{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:9px;background:var(--color-bg-primary);border:1px solid var(--color-border-primary);border-radius:9px;padding:14px 10px}.punchItem{text-align:center}.punchItem span,.punchItem small{display:block;color:var(--color-text-tertiary);font-size:10px}.punchItem strong{display:block;font-size:18px;direction:ltr;margin:8px 0 5px}.punchItem small{color:var(--color-text-secondary)}.punchDivider{height:40px;width:1px;background:var(--color-border-primary)}.detailStats{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:12px 0}.detailStats div{background:var(--color-bg-primary);border:1px solid var(--color-border-primary);border-radius:8px;padding:10px 7px;text-align:center}.detailStats span,.detailStats strong{display:block}.detailStats span{font-size:9px;color:var(--color-text-tertiary)}.detailStats strong{font-size:13px;direction:ltr;margin-top:5px}.warningText{color:var(--color-danger)}.anomalies,.otherRecords{display:grid;gap:7px;margin-top:18px}.anomalies>span,.otherRecords>span{font-size:11px;color:var(--color-text-secondary);font-weight:700}.anomalies small,.otherRecords small{display:block;border-radius:6px;padding:7px 9px;background:var(--color-day-pending);color:var(--color-warning);font-size:10px}.otherRecords small{background:var(--color-bg-primary);color:var(--color-text-secondary);border:1px solid var(--color-border-primary)}.emptyDetail{text-align:center;padding:70px 15px 45px;color:var(--color-text-tertiary)}.emptyDetail span{display:grid;place-items:center;width:44px;height:44px;margin:0 auto 14px;border:1px dashed var(--color-border-primary);border-radius:50%;font-size:24px}.emptyDetail strong{display:block;color:var(--color-text-secondary);font-size:12px}.emptyDetail p{font-size:11px;line-height:1.8;margin:8px 0}.detailLink{display:flex;justify-content:space-between;align-items:center;margin-top:22px;padding-top:17px;border-top:1px solid var(--color-border-primary);color:#6941c6;text-decoration:none;font-size:11px;font-weight:700}.detailLink span{font-size:18px}@media(max-width:1100px){.calendarBody{grid-template-columns:1fr}.detailsPanel{border-right:0;border-top:1px solid var(--color-border-primary);min-height:auto}.monthGrid{grid-template-columns:repeat(7,minmax(70px,1fr))}.dayCell{min-height:84px}.detailsPanel{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}.detailsHeader,.detailLink{grid-column:1/-1}.detailStatus{margin:0}.emptyDetail{grid-column:1/-1;padding:35px}.punchCard{margin:0}.detailStats{margin:0}}@media(max-width:700px){.calendarTopbar{align-items:flex-start;flex-direction:column;padding:18px}.toolbar{width:100%;justify-content:space-between}.calendarMain{padding:16px 12px}.legend{gap:10px}.monthGrid{grid-template-columns:repeat(7,minmax(45px,1fr))}.weekday{padding:8px 5px;text-align:center;font-size:9px}.dayCell{min-height:67px;padding:8px 6px;gap:5px}.dayMarker{height:6px;width:6px;padding:0;border-radius:50%;font-size:0}.dayCell small{font-size:9px}.weekGrid{overflow:auto;grid-template-columns:repeat(7,92px)}.detailsPanel{display:block}.punchCard{margin-top:12px}.detailStats{margin:12px 0}.viewSwitch button{min-width:52px;padding:0 7px}}
+
+/* Selected dates use the brand surface and a dedicated edge treatment so they stay clear of attendance-status colors. */
+.dayCell,
+.dayColumn { isolation: isolate; }
+.dayCell.selected {
+  z-index: 2;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--color-brand-primary) 9%, var(--color-bg-primary)), var(--color-bg-primary) 68%);
+  box-shadow: inset 0 0 0 2px var(--color-brand-primary), 0 4px 14px color-mix(in srgb, var(--color-brand-primary) 16%, transparent);
+}
+.dayColumn.selectedColumn::before {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: var(--color-brand-primary);
+  content: "";
+}
+.dayCell.selected .dayNumber:not(.todayNumber) {
+  display: grid;
+  min-width: 27px;
+  height: 27px;
+  place-items: center;
+  padding: 0 7px;
+  border: 1px solid color-mix(in srgb, var(--color-brand-primary) 34%, transparent);
+  border-radius: 8px;
+  background: var(--color-brand-soft);
+  color: var(--color-brand-primary);
+}
+.dayCell.selected .todayNumber {
+  background: var(--color-brand-primary);
+  color: #fff;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-brand-primary) 18%, transparent);
+}
+.dayCell.selected .dayMarker { box-shadow: 0 1px 2px color-mix(in srgb, var(--color-text-primary) 8%, transparent); }
+.dayColumn.selectedColumn {
+  position: relative;
+  z-index: 2;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--color-brand-primary) 9%, var(--color-bg-primary)), var(--color-bg-primary) 68%);
+  box-shadow: inset 0 0 0 2px var(--color-brand-primary), 0 4px 14px color-mix(in srgb, var(--color-brand-primary) 16%, transparent);
+}
+.selectedColumn > strong { color: var(--color-brand-primary); }
+.selectedColumn .columnDate { color: var(--color-brand-primary); font-weight: 700; }
+.dateBadge { border: 1px solid color-mix(in srgb, var(--color-brand-primary) 25%, transparent); background: var(--color-brand-soft); color: var(--color-brand-primary); box-shadow: 0 4px 12px color-mix(in srgb, var(--color-brand-primary) 12%, transparent); }
+.calendarIcon, .viewSwitch .activeView { border-color: color-mix(in srgb, var(--color-brand-primary) 25%, var(--color-border-primary)); background: var(--color-brand-soft); color: var(--color-brand-primary); }
+.detailLink { color: var(--color-brand-primary); }
+
+.dayCell.selected,
+.dayColumn.selectedColumn { background: transparent; box-shadow: none; }
+.dayCell > *,
+.dayColumn > * { position: relative; z-index: 1; }
+.selectedDateIndicator {
+  position: absolute;
+  inset: 3px;
+  z-index: 0 !important;
+  border: 2px solid var(--color-brand-primary);
+  border-radius: 10px;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--color-brand-primary) 10%, var(--color-bg-primary)), var(--color-bg-primary) 72%);
+  box-shadow: 0 5px 16px color-mix(in srgb, var(--color-brand-primary) 18%, transparent);
+  pointer-events: none;
+}
+.dayColumn .selectedDateIndicator { inset: 4px; border-radius: 9px; }
+.dayColumn.selectedColumn::before { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .dayCell, .dayColumn { transition: none; }
+}
+
+/* The week and day views use the available canvas for useful summaries instead of leaving an empty panel. */
+.weekViewStack { display: grid; gap: 16px; }
+.weekSummary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.weekMetric { display: grid; min-height: 82px; align-content: center; gap: 5px; padding: 14px 15px; border: 1px solid var(--color-border-secondary); border-radius: 10px; background: var(--color-bg-secondary); }
+.weekMetric span, .weekMetric small { color: var(--color-text-tertiary); font-size: 10px; }
+.weekMetric strong { color: var(--color-text-primary); font-size: 18px; direction: ltr; text-align: right; }
+.weekMetricWarning { border-color: color-mix(in srgb, var(--color-warning) 28%, var(--color-border-secondary)); background: color-mix(in srgb, var(--color-warning) 7%, var(--color-bg-secondary)); }
+.weekMetricWarning strong { color: var(--color-warning); }
+.weekGrid { min-height: 430px; }
+.weekGrid .dayColumn { min-height: 430px; justify-content: flex-start; padding: 19px 13px; gap: 12px; }
+.weekGrid .dayColumn .columnRule { margin: 8px 0 12px; }
+.weekGrid .dayColumn .statusPill { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.weekGrid .dayColumn .columnDuration { margin-top: auto; padding: 9px 13px; border: 1px solid var(--color-border-secondary); border-radius: 9px; background: var(--color-bg-secondary); }
+.weekGrid .dayColumn .noRecord { margin-top: 52px; padding: 10px 12px; border: 1px dashed var(--color-border-primary); border-radius: 8px; }
+
+.dayView { width: 100%; min-width: 0; }
+.largeDay { width: 100%; max-width: none; min-height: 460px; align-items: stretch; justify-content: flex-start; gap: 22px; padding: 28px; text-align: right; }
+.largeDayHeading { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; width: 100%; padding-bottom: 20px; border-bottom: 1px solid var(--color-border-secondary); }
+.largeDayHeading > div { display: grid; gap: 7px; }
+.largeDayHeading .columnDate { color: var(--color-text-tertiary); font-size: 12px; }
+.largeDayHeading strong { color: var(--color-text-primary); font-size: 25px; letter-spacing: -.025em; }
+.largeDayHeading .statusPill { align-self: center; }
+.largePunchGrid { display: grid; grid-template-columns: minmax(0, 1fr) 120px minmax(0, 1fr); align-items: center; width: min(100%, 760px); margin: auto; gap: 16px; }
+.largePunch { display: grid; gap: 7px; padding: 20px 16px; border: 1px solid var(--color-border-secondary); border-radius: 12px; background: var(--color-bg-secondary); }
+.largePunch span, .largePunch small { color: var(--color-text-tertiary); font-size: 11px; }
+.largePunch strong { color: var(--color-text-primary); font-size: 27px; direction: ltr; letter-spacing: -.04em; }
+.largePunch small { color: var(--color-text-secondary); }
+.largeTimeline { display: flex; align-items: center; gap: 6px; color: var(--color-brand-primary); font-size: 10px; white-space: nowrap; }
+.largeTimeline i { position: relative; display: block; flex: 1; align-self: center; height: 1px; background: color-mix(in srgb, var(--color-brand-primary) 35%, var(--color-border-secondary)); }
+.largeTimeline i:first-child::after, .largeTimeline i:last-child::after { position: absolute; top: 50%; display: block; width: 6px; height: 6px; border: 2px solid var(--color-brand-primary); border-radius: 50%; background: var(--color-bg-primary); content: ""; transform: translateY(-50%); }
+.largeTimeline i:first-child::after { right: -5px; }
+.largeTimeline i:last-child::after { left: -5px; }
+.largeDayMetrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: min(100%, 760px); margin: auto auto 0; gap: 10px; }
+.largeDayMetrics div { display: grid; gap: 6px; padding: 14px; border: 1px solid var(--color-border-secondary); border-radius: 10px; background: var(--color-bg-primary); }
+.largeDayMetrics span { color: var(--color-text-tertiary); font-size: 10px; }
+.largeDayMetrics strong { color: var(--color-text-primary); font-size: 16px; direction: ltr; }
+.largeEmpty { display: grid; flex: 1; place-items: center; align-content: center; gap: 9px; color: var(--color-text-tertiary); text-align: center; }
+.largeEmpty span { display: grid; place-items: center; width: 52px; height: 52px; border: 1px dashed var(--color-border-primary); border-radius: 15px; color: var(--color-brand-primary); font-size: 25px; }
+.largeEmpty strong { color: var(--color-text-secondary); font-size: 14px; }
+.largeEmpty small { font-size: 11px; }
+
+@media (max-width: 900px) {
+  .weekSummary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .largePunchGrid, .largeDayMetrics { width: 100%; }
+}
+
+@media (max-width: 700px) {
+  .weekSummary { gap: 7px; }
+  .weekMetric { min-height: 70px; padding: 10px; }
+  .weekMetric strong { font-size: 15px; }
+  .weekGrid { min-height: 0; }
+  .weekGrid .dayColumn { min-height: 300px; padding: 15px 9px; }
+  .largeDay { min-height: 390px; padding: 20px 15px; }
+  .largeDayHeading strong { font-size: 20px; }
+  .largePunchGrid { grid-template-columns: 1fr; gap: 9px; }
+  .largeTimeline { order: 2; width: 100%; }
+  .largePunch:first-child { order: 1; }
+  .largePunch:last-child { order: 3; }
+  .largeDayMetrics { gap: 7px; }
+  .largeDayMetrics div { padding: 10px 7px; }
+}
+
+/* Keep week hover behavior consistent with the month grid. */
+.weekGrid .dayColumn:not(.selectedColumn):hover { background: var(--color-bg-tertiary); }
+.navigationArrow { width: 17px; height: 17px; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; vertical-align: middle; }
+.detailArrow { width: 16px; height: 16px; flex: 0 0 16px; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
