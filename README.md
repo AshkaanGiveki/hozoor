@@ -1,6 +1,6 @@
 # Hozoor — سامانه حضور و مرخصی
 
-نسخهٔ اول قابل‌اجرای سامانهٔ تک‌شرکتی حضور، مرخصی و مدیریت زمان کاری است. برنامه به‌صورت یک monolith ماژولار Next.js با PostgreSQL و Prisma اجرا می‌شود.
+سامانه فارسی و راست‌به‌چپ برای مدیریت حضور، مرخصی، زمان کار، درخواست‌ها، تأییدها و گزارش‌های منابع انسانی.
 
 ## اجرای سریع
 
@@ -8,21 +8,41 @@
 docker compose up -d --build
 ```
 
-سپس به [http://localhost:3000](http://localhost:3000) بروید. migration و seed در شروع سرویس انجام می‌شود.
+سپس برنامه را در [http://localhost:3000](http://localhost:3000) باز کنید. مهاجرت Prisma و راه‌اندازی اولیه به‌صورت خودکار هنگام شروع سرویس انجام می‌شود.
 
-حساب‌های نمونه: `admin` / `ChangeMe123!`، `hr` / `HrDemo123!`، `manager` / `Manager123!`، `employee1` / `Employee123!`. حساب admin در ورود اول تغییر رمز می‌خواهد؛ رمزهای نمونه را در محیط واقعی تغییر دهید.
-
-## توسعه
+## توسعه محلی
 
 ```bash
 corepack pnpm install
-$env:DATABASE_URL="postgresql://hozoor:hozoor@localhost:5432/hozoor"; corepack pnpm prisma generate
+corepack pnpm prisma generate
 corepack pnpm dev
 ```
 
-فرمت CSV استاندارد: `employeeCode,timestamp,type`؛ فایل XLSX نیز با نگاشت ستون‌های wizard وارد می‌شود. ورود دوبارهٔ همان رکورد به‌واسطهٔ fingerprint یکتا duplicate محسوب می‌شود.
+برای اجرای محلی به PostgreSQL و متغیر `DATABASE_URL` نیاز دارید. فایل `.env.example` تنظیمات لازم را نشان می‌دهد.
 
-## کیفیت
+## حساب‌های نمونه
+
+در حالت seed نمایشی، حساب‌های زیر ایجاد می‌شوند:
+
+- `admin` / `ChangeMe123!`
+- `hr` / `HrDemo123!`
+- `manager` / `Manager123!`
+- `employee1` / `Employee123!`
+
+حساب مدیر سامانه در اولین ورود نیاز به تغییر رمز دارد. رمزهای نمونه را در محیط واقعی حتماً تغییر دهید.
+
+## قابلیت‌های اصلی
+
+- احراز هویت واقعی با session امن، Argon2id و تغییر رمز اجباری
+- کنترل دسترسی نقش‌محور و محدوده مدیریتی
+- تقویم و تاریخ‌های جلالی با زمان داخلی UTC و timezone قابل تنظیم
+- قوانین حضور نسخه‌بندی‌شده، برنامه کاری، تأخیر، تعجیل، کمبود ساعت و اضافه‌کاری
+- ورود فایل CSV و XLSX با تشخیص تکراری و نگاشت شناسه دستگاه
+- درخواست مرخصی، خروج ساعتی، اصلاح تردد و گردش تأیید
+- داشبورد، گزارش‌های فردی و سازمانی، خروجی CSV/XLSX و ثبت رویدادهای حسابرسی
+- رابط کاربری کاملاً فارسی RTL با فونت محلی IRANSansX، حالت روشن و تاریک
+
+## کیفیت و توسعه
 
 ```bash
 corepack pnpm typecheck
@@ -30,4 +50,4 @@ corepack pnpm test
 corepack pnpm build
 ```
 
-جزئیات معماری، امنیت، مدل سیاست حضور و پشتیبان‌گیری در [ARCHITECTURE.md](ARCHITECTURE.md)، [SECURITY.md](SECURITY.md)، [DEPLOYMENT.md](DEPLOYMENT.md) و `docs/` آمده است.
+معماری، امنیت، استقرار و مدل قوانین در فایل‌های `ARCHITECTURE.md`، `SECURITY.md`، `DEPLOYMENT.md` و پوشه `docs/` توضیح داده شده‌اند.
