@@ -717,7 +717,34 @@
   overflow-x: hidden;
   overflow-y: auto;
   scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--color-text-tertiary) 38%, transparent) transparent;
+  scrollbar-gutter: stable;
   animation: pageIn .35s ease both;
+}
+
+.main::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.main::-webkit-scrollbar-track {
+  margin-block: 12px;
+  border-radius: 999px;
+  background: transparent;
+}
+
+.main::-webkit-scrollbar-thumb {
+  min-height: 38px;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-text-tertiary) 38%, transparent);
+  background-clip: padding-box;
+  transition: background .18s ease;
+}
+
+.main::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--color-brand-primary) 62%, transparent);
+  background-clip: padding-box;
 }
 
 .pageTransition { min-height: 100%; }
@@ -814,7 +841,7 @@
 
   .header { padding-right: 18px; padding-left: 18px; }
   .headerHint { display: none; }
-  .main { padding: 24px 4px 12px; }
+  .main { padding: 24px 4px 12px 12px; }
   .footer { padding: 0 14px; }
 }
 
@@ -822,7 +849,7 @@
   .header { height: 66px; border-radius: 15px; }
   .header .eyebrow { display: none; }
   .header h2 { font-size: 14px; }
-  .main { padding: 20px 2px 10px; }
+  .main { padding: 20px 2px 10px 10px; }
   .footer { flex-wrap: wrap; height: auto; min-height: 42px; padding: 8px 12px; gap: 8px; }
   .footerBrand, .footerLinks { flex-basis: calc(50% - 8px); }
   .copyright { order: 3; flex-basis: 100%; }
