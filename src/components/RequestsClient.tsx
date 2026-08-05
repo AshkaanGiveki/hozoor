@@ -19,17 +19,27 @@ export default function RequestsClient({ types, initial }: Props) {
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [data] = useState(initial);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [proposedIn, setProposedIn] = useState("");
+  const [proposedOut, setProposedOut] = useState("");
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submitting) return;
     setSubmitting(true);
     const form = new FormData(event.currentTarget);
+    const startDate = String(form.get("startDate") || "");
+    const endDate = String(form.get("endDate") || "");
+    const proposedIn = String(form.get("proposedIn") || "");
+    const proposedOut = String(form.get("proposedOut") || "");
+    if (kind === "leave" && startDate && endDate && startDate > endDate) { setMessage("تاریخ شروع باید قبل از تاریخ پایان باشد."); setSubmitting(false); return; }
+    if (kind === "correction" && proposedIn && proposedOut && proposedIn > proposedOut) { setMessage("زمان ورود باید قبل از زمان خروج باشد."); setSubmitting(false); return; }
     const body = kind === "leave"
-      ? { kind, leaveTypeId: form.get("leaveTypeId"), startDate: form.get("startDate"), endDate: form.get("endDate"), requestedMinutes: Number(form.get("requestedMinutes")), reason: form.get("reason") }
+      ? { kind, leaveTypeId: form.get("leaveTypeId"), startDate, endDate, requestedMinutes: Number(form.get("requestedMinutes")), reason: form.get("reason") }
       : kind === "offtime"
         ? { kind, date: form.get("date"), startMinutes: timeToMinutes(form.get("startMinutes")), endMinutes: timeToMinutes(form.get("endMinutes")), reason: form.get("reason") }
-        : { kind, date: form.get("date"), proposedIn: form.get("proposedIn") || undefined, proposedOut: form.get("proposedOut") || undefined, reason: form.get("reason") };
+        : { kind, date: form.get("date"), proposedIn: proposedIn || undefined, proposedOut: proposedOut || undefined, reason: form.get("reason") };
 
     try {
       const response = await fetch("/api/v1/requests", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -60,7 +70,7 @@ export default function RequestsClient({ types, initial }: Props) {
         <form className="stack" onSubmit={submit}>
           {kind === "leave" && <>
             <label>نوع مرخصی<SelectField name="leaveTypeId" required placeholder="انتخاب نوع مرخصی" options={types.map((type) => ({ value: type.id, label: `${type.name} (${type.unit === "DAY" ? "روزانه" : "ساعتی"})` }))} /></label>
-            <div className={styles.two}><label>از تاریخ<JalaliDatePicker name="startDate" required/></label><label>تا تاریخ<JalaliDatePicker name="endDate" required/></label></div>
+            <div className={styles.two}><label>از تاریخ<JalaliDatePicker name="startDate" value={startDate} onChange={setStartDate} required maxValue={endDate || undefined}/></label><label>تا تاریخ<JalaliDatePicker name="endDate" value={endDate} onChange={setEndDate} required minValue={startDate || undefined}/></label></div>
             <label>مدت درخواست <span className="hint">(دقیقه)</span><input type="number" name="requestedMinutes" min="1" placeholder="مثال: ۴۸۰" required/></label>
           </>}
           {kind === "offtime" && <>
@@ -69,7 +79,7 @@ export default function RequestsClient({ types, initial }: Props) {
           </>}
           {kind === "correction" && <>
             <label>روز موردنظر<JalaliDatePicker name="date" required/></label>
-            <div className={styles.two}><label>ورود صحیح<JalaliDatePicker name="proposedIn" withTime/></label><label>خروج صحیح<JalaliDatePicker name="proposedOut" withTime/></label></div>
+            <div className={styles.two}><label>ورود صحیح<JalaliDatePicker name="proposedIn" value={proposedIn} onChange={setProposedIn} withTime maxValue={proposedOut || undefined}/></label><label>خروج صحیح<JalaliDatePicker name="proposedOut" value={proposedOut} onChange={setProposedOut} withTime minValue={proposedIn || undefined}/></label></div>
           </>}
           <label>دلیل درخواست<textarea name="reason" required placeholder="شرح کوتاه دلیل را بنویسید"/></label>
           {message && <div className="alert success" role="status">{message}</div>}

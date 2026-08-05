@@ -9,5 +9,7 @@ test-results
 .pnpm-store
 dev-server.log
 dev-server-error.log
+dev-server-3001.log
+dev-server-3001-error.log
 tsconfig.tsbuildinfo
 sidebar-*.png

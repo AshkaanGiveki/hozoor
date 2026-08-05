@@ -8,12 +8,14 @@ import ResponsiveDataList from "./ResponsiveDataList";
 import styles from "./ReportsClient.module.scss";
 
 const minutes = (value: number) => `${Math.floor(value / 60)}:${String(value % 60).padStart(2, "0")}`;
-const statusLabel = (status: string) => status === "INSUFFICIENT_TIME" ? "کمبود ساعت کاری" : status === "PRESENT" ? "حضور کامل" : status;
+const statusLabels: Record<string, string> = { PRESENT: "حضور کامل", ABSENT: "غیبت", INCOMPLETE: "ثبت ناقص", ON_LEAVE: "مرخصی تأییدشده", PARTIAL_LEAVE: "مرخصی ساعتی", OFF_TIME: "خروج ساعتی", PARTIAL_OFF_TIME: "خروج ساعتی تأییدشده", HOLIDAY: "تعطیل رسمی", WEEKLY_OFF: "روز استراحت", NOT_SCHEDULED: "بدون برنامه", INSUFFICIENT_TIME: "کمبود ساعت کاری", MISSION: "مأموریت", REMOTE_WORK: "دورکاری" };
+const statusLabel = (status: string) => statusLabels[status] ?? "نامشخص";
 
 export default function ReportsClient({ initial }: { initial: any[] }) {
   const [rows, setRows] = useState(initial);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
+  const [message, setMessage] = useState("");
 
   const totals = useMemo(() => ({
     records: rows.length,
@@ -29,6 +31,7 @@ export default function ReportsClient({ initial }: { initial: any[] }) {
   }, [rows]);
 
   async function load() {
+    if (from && to && from > to) { setMessage("تاریخ شروع باید قبل از تاریخ پایان باشد."); return; }
     const query = new URLSearchParams();
     if (from) query.set("from", from);
     if (to) query.set("to", to);
@@ -42,7 +45,7 @@ export default function ReportsClient({ initial }: { initial: any[] }) {
 
     <section className={styles.controlsCard}>
       <div className={styles.controlsHeader}><div><h2>بازه گزارش</h2><p>داده‌های metrics و فهرست جزئیات با همین بازه به‌روزرسانی می‌شوند.</p></div><span className={styles.liveBadge}><i />داده زنده</span></div>
-      <div className="filterBar"><label>از تاریخ<JalaliDatePicker name="from" value={from} onChange={setFrom} /></label><label>تا تاریخ<JalaliDatePicker name="to" value={to} onChange={setTo} /></label><button className="button secondary" onClick={load}>اعمال فیلتر</button></div>
+      <div className="filterBar"><label>از تاریخ<JalaliDatePicker name="from" value={from} onChange={setFrom} maxValue={to || undefined} /></label><label>تا تاریخ<JalaliDatePicker name="to" value={to} onChange={setTo} minValue={from || undefined} /></label><button className="button secondary" onClick={load}>اعمال فیلتر</button></div>{message && <div className="alert" role="alert">{message}</div>}
     </section>
 
     <section className={styles.metricsSection} aria-label="خلاصه عملکرد گزارش">
@@ -88,6 +91,7 @@ function Sparkline({ values }: { values: number[] }) {
   const max = Math.max(...points, 1);
   const min = Math.min(...points, 0);
   const range = Math.max(max - min, 1);
-  const coordinates = points.map((value, index) => `${(index / (points.length - 1)) * 120},${30 - ((value - min) / range) * 24}`).join(" ");
-  return <svg viewBox="0 0 120 36" preserveAspectRatio="none" aria-hidden="true"><path d={`M ${coordinates}`} fill="none" vectorEffect="non-scaling-stroke" /><path d={`M 0 34 L ${coordinates.replace(/ /g, " L ")} L 120 34 Z`} className={styles.chartArea} /></svg>;
+  const coordinates = points.map((value, index) => ({ x: (index / (points.length - 1)) * 120, y: 30 - ((value - min) / range) * 24 }));
+  const curve = coordinates.slice(1).reduce((path, point, index) => { const previous = coordinates[index]; const midpoint = (previous.x + point.x) / 2; return `${path} C ${midpoint},${previous.y} ${midpoint},${point.y} ${point.x},${point.y}`; }, `M ${coordinates[0].x},${coordinates[0].y}`);
+  return <svg viewBox="0 0 120 36" preserveAspectRatio="none" aria-hidden="true"><path d={curve} fill="none" vectorEffect="non-scaling-stroke" /><path d={`${curve} L 120 34 L 0 34 Z`} className={styles.chartArea} /></svg>;
 }

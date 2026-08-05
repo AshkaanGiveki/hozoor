@@ -6,7 +6,7 @@ import styles from "./JalaliDatePicker.module.scss";
 
 type JalaliParts = { jy: number; jm: number; jd: number };
 type PickerMode = "days" | "months" | "years";
-type Props = { name: string; defaultValue?: string; value?: string; onChange?: (value: string) => void; required?: boolean; withTime?: boolean; placeholder?: string; ariaLabel?: string };
+type Props = { name: string; defaultValue?: string; value?: string; onChange?: (value: string) => void; required?: boolean; withTime?: boolean; placeholder?: string; ariaLabel?: string; minValue?: string; maxValue?: string };
 
 const monthNames = ["فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور", "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند"];
 const weekDays = ["ش", "ی", "د", "س", "چ", "پ", "ج"];
@@ -48,7 +48,7 @@ function CalendarIcon() {
   return <svg className={styles.calendarIcon} viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M7.5 3.5v3M16.5 3.5v3M3.5 9.5h17M8 13h.01M12 13h.01M16 13h.01M8 16.5h.01M12 16.5h.01"/></svg>;
 }
 
-export default function JalaliDatePicker({ name, defaultValue, value, onChange, required = false, withTime = false, placeholder = "انتخاب تاریخ", ariaLabel = "انتخاب تاریخ جلالی" }: Props) {
+export default function JalaliDatePicker({ name, defaultValue, value, onChange, required = false, withTime = false, placeholder = "انتخاب تاریخ", ariaLabel = "انتخاب تاریخ جلالی", minValue, maxValue }: Props) {
   const initial = isoToJalali(value ?? defaultValue);
   const today = useMemo(nowJalali, []);
   const [selected, setSelected] = useState<JalaliParts | null>(initial);
@@ -88,6 +88,8 @@ export default function JalaliDatePicker({ name, defaultValue, value, onChange, 
 
   function choose(day: number) {
     const next = { jy: view.jy, jm: view.jm, jd: day };
+    const nextValue = `${partsToIso(next)}${withTime ? `T${time}` : ""}`;
+    if ((minValue && nextValue < minValue) || (maxValue && nextValue > maxValue)) return;
     setSelected(next); onChange?.(partsToIso(next)); setOpen(false); setMode("days");
   }
 
@@ -110,7 +112,7 @@ export default function JalaliDatePicker({ name, defaultValue, value, onChange, 
         <button type="button" className={styles.arrowButton} onClick={() => mode === "years" ? setView({ ...view, jy: view.jy + 12 }) : changeMonth(1)} aria-label="بعدی"><Chevron direction="next" /></button>
       </div>
       <div className={styles.calendarStage} key={`${mode}-${view.jy}-${view.jm}`}>
-        {mode === "days" && <><div className={styles.weekRow}>{weekDays.map((day) => <span key={day}>{day}</span>)}</div><div className={styles.days}>{cells.map((day, index) => day < 1 || day > length ? <span className={styles.emptyDay} key={`${view.jy}-${view.jm}-empty-${index}`} /> : <button type="button" key={`${view.jy}-${view.jm}-${day}`} className={`${styles.day} ${selected?.jy === view.jy && selected.jm === view.jm && selected.jd === day ? styles.selectedDay : ""} ${today.jy === view.jy && today.jm === view.jm && today.jd === day ? styles.todayDay : ""}`} onClick={() => choose(day)}>{faNumber.format(day)}</button>)}</div></>}
+        {mode === "days" && <><div className={styles.weekRow}>{weekDays.map((day) => <span key={day}>{day}</span>)}</div><div className={styles.days}>{cells.map((day, index) => { if (day < 1 || day > length) return <span className={styles.emptyDay} key={`${view.jy}-${view.jm}-empty-${index}`} />; const candidate = partsToIso({ jy: view.jy, jm: view.jm, jd: day }); const disabled = Boolean((minValue && candidate < minValue.slice(0, 10)) || (maxValue && candidate > maxValue.slice(0, 10))); return <button type="button" disabled={disabled} key={`${view.jy}-${view.jm}-${day}`} className={`${styles.day} ${selected?.jy === view.jy && selected.jm === view.jm && selected.jd === day ? styles.selectedDay : ""} ${today.jy === view.jy && today.jm === view.jm && today.jd === day ? styles.todayDay : ""}`} onClick={() => choose(day)}>{faNumber.format(day)}</button>; })}</div></>}
         {mode === "months" && <div className={styles.monthGrid}>{monthNames.map((month, index) => <button type="button" key={month} className={view.jm === index + 1 ? styles.selectedOption : ""} onClick={() => chooseMonth(index + 1)}>{month}</button>)}</div>}
         {mode === "years" && <div className={styles.yearGrid}>{years.map((year) => <button type="button" key={year} className={view.jy === year ? styles.selectedOption : ""} onClick={() => chooseYear(year)}>{formatYear(year)}</button>)}</div>}
       </div>

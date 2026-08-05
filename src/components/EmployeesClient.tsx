@@ -5,9 +5,9 @@ import ResponsiveDataList from "./ResponsiveDataList";
 import SelectField from "./SelectField";
 import styles from "./EmployeesClient.module.scss";
 
-type Employee = { id: string; employeeCode: string; firstName: string; lastName: string; department?: { name?: string } | null; team?: { name?: string } | null; user?: { username?: string } | null };
+type Employee = { id: string; employeeCode: string; firstName: string; lastName: string; department?: { name?: string } | null; team?: { name?: string } | null; group?: { name?: string } | null; user?: { username?: string } | null };
 
-export default function EmployeesClient({ initial, departments, teams }: { initial: Employee[]; departments: any[]; teams: any[] }) {
+export default function EmployeesClient({ initial, departments, teams, groups }: { initial: Employee[]; departments: any[]; teams: any[]; groups: any[] }) {
   const [rows, setRows] = useState(initial);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -38,6 +38,7 @@ export default function EmployeesClient({ initial, departments, teams }: { initi
         <label>نقش<SelectField name="role" defaultValue="EMPLOYEE" options={[{ value: "EMPLOYEE", label: "کارمند" }, { value: "MANAGER", label: "مدیر" }, { value: "HR_ADMIN", label: "منابع انسانی" }]} /></label>
         <label>بخش<SelectField name="departmentId" placeholder="انتخاب بخش" options={[{ value: "", label: "بدون بخش" }, ...departments.map((item) => ({ value: item.id, label: item.name }))]} /></label>
         <label>تیم<SelectField name="teamId" placeholder="انتخاب تیم" options={[{ value: "", label: "بدون تیم" }, ...teams.map((item) => ({ value: item.id, label: item.name }))]} /></label>
+        <label>گروه حضور<SelectField name="groupId" placeholder="بدون گروه" options={[{ value: "", label: "بدون گروه" }, ...groups.map((item) => ({ value: item.id, label: item.name }))]} /></label>
         {message && <div className="alert success">{message}</div>}
         <button className="button primary" disabled={loading}>{loading ? "در حال ایجاد حساب…" : "ایجاد حساب کارمند"}</button>
       </form>
@@ -52,6 +53,7 @@ export default function EmployeesClient({ initial, departments, teams }: { initi
           { key: "status", label: "وضعیت", primary: true, value: () => <span className="status present">فعال</span>, search: () => "فعال active" },
           { key: "department", label: "بخش", value: (row) => row.department?.name || "—", search: (row) => row.department?.name || "" },
           { key: "team", label: "تیم", value: (row) => row.team?.name || "—", search: (row) => row.team?.name || "" },
+          { key: "group", label: "گروه حضور", value: (row) => row.group?.name || "—", search: (row) => row.group?.name || "" },
           { key: "username", label: "نام کاربری", value: (row) => <span dir="ltr">{row.user?.username || "—"}</span>, search: (row) => row.user?.username || "" },
         ]}
       />
