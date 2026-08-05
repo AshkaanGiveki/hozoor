@@ -7,6 +7,7 @@ import SelectField from "./SelectField";
 import styles from "./ImportsClient.module.scss";
 
 type Job = { id: string; filename: string; status: string; importedCount: number; duplicateCount: number; errorCount: number; createdAt: string; device: string };
+const importStatusLabels: Record<string, string> = { PREVIEW: "پیش‌نمایش", VALIDATING: "در حال بررسی", COMPLETED: "تکمیل‌شده", FAILED: "ناموفق" };
 
 export default function ImportsClient({ devices, jobs: initial }: { devices: { id: string; name: string }[]; jobs: Job[] }) {
   const [jobs, setJobs] = useState(initial);
@@ -51,7 +52,7 @@ export default function ImportsClient({ devices, jobs: initial }: { devices: { i
         fields={[
           { key: "filename", label: "فایل", primary: true, value: (job) => <span dir="ltr">{job.filename}</span>, search: (job) => job.filename },
           { key: "device", label: "دستگاه", primary: true, value: (job) => job.device, search: (job) => job.device },
-          { key: "status", label: "وضعیت", primary: true, value: (job) => <span className={`status ${job.status.toLowerCase()}`}>{job.status === "COMPLETED" ? "تکمیل‌شده" : job.status}</span>, search: (job) => `${job.status} تکمیل‌شده` },
+          { key: "status", label: "وضعیت", primary: true, value: (job) => <span className={`status ${job.status.toLowerCase()}`}>{importStatusLabels[job.status] ?? "نامشخص"}</span>, search: (job) => `${job.status} ${importStatusLabels[job.status] ?? "نامشخص"}` },
           { key: "createdAt", label: "زمان ثبت", value: (job) => formatJalaliDateTime(job.createdAt), search: (job) => formatJalaliDateTime(job.createdAt) },
           { key: "imported", label: "رکورد جدید", value: (job) => job.importedCount, search: (job) => String(job.importedCount) },
           { key: "duplicates", label: "تکراری", value: (job) => job.duplicateCount, search: (job) => String(job.duplicateCount) },

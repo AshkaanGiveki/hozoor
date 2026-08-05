@@ -5,7 +5,7 @@ import JalaliDatePicker from "./JalaliDatePicker";
 import SelectField from "./SelectField";
 import styles from "./PolicyForm.module.scss";
 
-export default function PolicyForm() {
+export default function PolicyForm({ groups = [] }: { groups?: { id: string; name: string }[] }) {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -68,6 +68,7 @@ export default function PolicyForm() {
           مدل اضافه‌کار
           <SelectField name="overtimeMode" defaultValue="DISABLED" options={[{ value: "DISABLED", label: "غیرفعال" }, { value: "AUTOMATIC", label: "خودکار" }, { value: "APPROVAL_REQUIRED", label: "نیازمند تأیید" }, { value: "SCHEDULED_ONLY", label: "فقط طبق برنامه" }]} />
         </label>
+        <label>گروه مشمول قانون<SelectField name="groupId" placeholder="قانون عمومی شرکت" options={[{ value: "", label: "قانون عمومی شرکت" }, ...groups.map((group) => ({ value: group.id, label: group.name }))]} /></label>
       </div>
       <div className={styles.footer}>
         <p>قانون جدید از تاریخ مؤثر روی محاسبات همان روز و روزهای آینده اعمال می‌شود.</p>

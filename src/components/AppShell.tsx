@@ -7,7 +7,7 @@ import styles from "./AppShell.module.scss";
 
 type Props = {
   children: React.ReactNode;
-  user: { firstName: string; lastName: string; role: string; mustChangePassword: boolean };
+  user: { firstName: string; lastName: string; role: string; mustChangePassword: boolean; avatarUrl?: string | null };
 };
 
 type IconName =
@@ -128,7 +128,7 @@ export default function AppShell({ children, user }: Props) {
         </div>
         <div className={styles.accountArea} ref={accountRef}>
           <button type="button" className={styles.accountTrigger} aria-expanded={accountOpen} aria-haspopup="menu" onClick={() => setAccountOpen((open) => !open)}>
-            <span className={styles.avatar}>{user.firstName?.[0] ?? "ک"}</span>
+            <span className={styles.avatar}>{user.avatarUrl ? <img src={user.avatarUrl} alt="" /> : <>{user.firstName?.[0] ?? "ک"} {user.lastName?.[0] ?? ""}</>}</span>
             <span className={styles.accountText}><strong>{user.firstName} {user.lastName}</strong><small>{user.role === "ADMIN" ? "مدیر سامانه" : user.role === "HR_ADMIN" ? "مدیر منابع انسانی" : user.role === "MANAGER" ? "مدیر" : "کارمند"}</small></span>
             <span className={styles.accountChevron}><AppIcon name="chevron" size={17}/></span>
           </button>

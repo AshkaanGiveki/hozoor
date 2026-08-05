@@ -14,6 +14,10 @@ const statusLabels: Record<string, string> = {
   HOLIDAY: "تعطیل رسمی",
   WEEKLY_OFF: "روز استراحت",
   NOT_SCHEDULED: "بدون برنامه",
+  MISSION: "مأموریت",
+  REMOTE_WORK: "دورکاری",
+  PARTIAL_LEAVE: "مرخصی ساعتی",
+  OFF_TIME: "خروج ساعتی",
 };
 
 export default async function Attendance() {
@@ -40,7 +44,7 @@ export default async function Attendance() {
       code: row.employee.employeeCode,
     },
     status: row.status,
-    statusLabel: statusLabels[row.status] ?? row.status,
+    statusLabel: statusLabels[row.status] ?? "نامشخص",
     firstIn: row.firstIn?.toISOString() ?? null,
     lastOut: row.lastOut?.toISOString() ?? null,
     validWorkMinutes: row.validWorkMinutes,

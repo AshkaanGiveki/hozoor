@@ -14,7 +14,7 @@ type Device = { id: string; name: string; type: string };
 type LeaveType = { id: string; name: string; unit: string };
 
 type Props = {
-  user: { firstName: string; lastName: string; username: string; role: Role; email: string; phone: string; employeeCode: string };
+  user: { firstName: string; lastName: string; username: string; role: Role; email: string; phone: string; employeeCode: string; avatarUrl?: string | null };
   company: { name: string; timezone: string; weekStartsOn: number };
   canManageCompany: boolean;
   canEditOrganization: boolean;
@@ -22,6 +22,7 @@ type Props = {
   policies: Policy[];
   devices: Device[];
   leaveTypes: LeaveType[];
+  groups: { id: string; name: string }[];
 };
 
 const personalTabs: Array<{ id: SettingsTab; label: string; description: string; icon: string }> = [
@@ -41,11 +42,12 @@ const organizationTabs: Array<{ id: SettingsTab; label: string; description: str
 const roleLabels: Record<Role, string> = { ADMIN: "مدیر سامانه", HR_ADMIN: "مدیر منابع انسانی", MANAGER: "مدیر تیم", EMPLOYEE: "کارمند", AUDITOR: "حسابرس" };
 const overtimeLabels: Record<string, string> = { DISABLED: "بدون محاسبه اضافه‌کار", AUTOMATIC: "محاسبه خودکار", APPROVAL_REQUIRED: "نیازمند تأیید", SCHEDULED_ONLY: "فقط طبق برنامه" };
 
-export default function SettingsClient({ user, company, canManageCompany, canEditOrganization, unreadNotifications, policies, devices, leaveTypes }: Props) {
+export default function SettingsClient({ user, company, canManageCompany, canEditOrganization, unreadNotifications, policies, devices, leaveTypes, groups }: Props) {
   const [tab, setTab] = useState<SettingsTab>("details");
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState<"success" | "danger">("success");
   const [busyAction, setBusyAction] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState(user.avatarUrl ?? "");
   const activeTabs = canManageCompany ? [...personalTabs, ...organizationTabs.filter((item) => canEditOrganization || ["company", "policy"].includes(item.id))] : personalTabs;
   const activeTab = activeTabs.find((item) => item.id === tab) ?? personalTabs[0];
 
@@ -78,6 +80,14 @@ export default function SettingsClient({ user, company, canManageCompany, canEdi
     } finally { setBusyAction(null); }
   }
 
+  async function uploadAvatar(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.currentTarget.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/") || file.size > 2 * 1024 * 1024) { setMessageType("danger"); setMessage("تصویر باید معتبر و حداکثر ۲ مگابایت باشد."); return; }
+    setBusyAction("avatar");
+    try { const form = new FormData(); form.append("file", file); const response = await fetch("/api/v1/auth/avatar", { method: "POST", body: form }); const result = await response.json(); setMessageType(response.ok ? "success" : "danger"); setMessage(response.ok ? "تصویر پروفایل ذخیره شد." : result.error?.message ?? "ذخیره تصویر انجام نشد."); if (response.ok) setAvatarUrl(result.data.avatarUrl); } finally { setBusyAction(null); }
+  }
+
   async function logoutAll() {
     if (busyAction) return;
     setBusyAction("logout");
@@ -94,7 +104,7 @@ export default function SettingsClient({ user, company, canManageCompany, canEdi
           <p className={styles.heroDescription}>اطلاعات شخصی، امنیت حساب و تنظیمات حضور شرکت را از اینجا مدیریت کنید.</p>
         </div>
         <div className={styles.profileChip}>
-          <span className={styles.avatar}>{user.firstName.slice(0, 1)}{user.lastName.slice(0, 1)}</span>
+          <span className={styles.avatar}>{avatarUrl ? <img src={avatarUrl} alt="" /> : <>{user.firstName.slice(0, 1)} {user.lastName.slice(0, 1)}</>}</span>
           <span><strong>{user.firstName} {user.lastName}</strong><small>{roleLabels[user.role]}</small></span>
         </div>
       </header>
@@ -135,7 +145,7 @@ export default function SettingsClient({ user, company, canManageCompany, canEdi
                 <label>ایمیل<input name="email" type="email" dir="ltr" defaultValue={user.email} placeholder="name@company.ir" /></label>
                 <label>شماره تماس<input name="phone" dir="ltr" defaultValue={user.phone} placeholder="۰۹۱۲۱۲۳۴۵۶۷" /></label>
               </div>
-              <FormFooter message={message} type={messageType} action="ذخیره اطلاعات" loading={busyAction === "profile"} />
+              <label className={styles.avatarUpload}>تغییر تصویر پروفایل<input type="file" accept="image/*" onChange={uploadAvatar} disabled={busyAction === "avatar"} /></label><FormFooter message={message} type={messageType} action="ذخیره اطلاعات" loading={busyAction === "profile"} />
             </form>
           </section>}
 
@@ -170,7 +180,7 @@ export default function SettingsClient({ user, company, canManageCompany, canEdi
           </section>}
 
           {tab === "policy" && <>
-            {canEditOrganization && <section className={styles.settingsCard}><CardHeader index="۰۶" title="ساخت نسخه جدید قانون حضور" description="قوانین جدید، سابقه محاسبات قبلی را تغییر نمی‌دهند." /><PolicyForm /></section>}
+            {canEditOrganization && <section className={styles.settingsCard}><CardHeader index="۰۶" title="گروه‌های حضور و قوانین اختصاصی" description="برای هر گروه، کارکنان را دسته‌بندی و قانون حضور جداگانه تعیین کنید." /><GroupForm initial={groups} /><PolicyForm groups={groups} /></section>}
             {!canEditOrganization && <section className={styles.readOnlyNote}>قوانین حضور شرکت را مشاهده می‌کنید. ایجاد و فعال‌سازی نسخه جدید فقط برای مدیران مجاز است.</section>}
             <section className={styles.settingsCard}><CardHeader title="نسخه‌های قوانین حضور" description="نسخه فعال بر اساس تاریخ مؤثر برای هر روز انتخاب می‌شود." badge={`${policies.length} نسخه`} /><div className={styles.list}>{policies.length === 0 && <div className={styles.emptyState}>هنوز قانونی ثبت نشده است.</div>}{policies.map((policy) => <div className={styles.listRow} key={policy.id}><div className={styles.listIdentity}><span className={styles.listIcon}>◷</span><div><strong>{policy.name} · نسخه {policy.version}</strong><small>از {formatJalaliDate(policy.effectiveFrom)} · حداقل {policy.minimumDailyMinutes} دقیقه · {overtimeLabels[policy.overtimeMode] ?? policy.overtimeMode}</small></div></div><span className={policy.status === "ACTIVE" ? styles.statusActive : styles.statusDraft}>{policy.status === "ACTIVE" ? "فعال" : "پیش‌نویس"}</span></div>)}</div></section>
           </>}
@@ -195,6 +205,13 @@ function CardHeader({ index, title, description, badge, action }: { index?: stri
 
 function FormFooter({ message, type, action, loading = false }: { message: string; type: "success" | "danger"; action: string; loading?: boolean }) {
   return <div className={styles.formFooter}><span>{message && <span className={type === "success" ? styles.successMessage : styles.errorMessage} role="status">{message}</span>}</span><button type="submit" className="button primary" disabled={loading}>{loading ? "در حال ذخیره…" : action}</button></div>;
+}
+
+function GroupForm({ initial }: { initial: { id: string; name: string }[] }) {
+  const [groups, setGroups] = useState(initial);
+  const [message, setMessage] = useState("");
+  async function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); const form = event.currentTarget; const response = await fetch("/api/v1/groups", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(Object.fromEntries(new FormData(form))) }); const result = await response.json(); if (response.ok) { setGroups([...groups, result.data]); setMessage("گروه ایجاد شد."); form.reset(); } else setMessage(result.error?.message ?? "ایجاد گروه انجام نشد."); }
+  return <form className={styles.form} onSubmit={submit}><div className={styles.formGrid}><label>نام گروه<input name="name" placeholder="مثلاً گروه اضافه‌کار" required /></label><div className={styles.list}>{groups.map((group) => <span key={group.id} className={styles.counterBadge}>{group.name}</span>)}</div></div>{message && <div className={styles.successMessage}>{message}</div>}<button className="button secondary">افزودن گروه</button></form>;
 }
 
 function PasswordForm({ message, messageType, setMessage, setMessageType }: { message: string; messageType: "success" | "danger"; setMessage: (value: string) => void; setMessageType: (value: "success" | "danger") => void }) {

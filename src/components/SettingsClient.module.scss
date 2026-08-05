@@ -120,3 +120,7 @@
 .listRow:nth-child(2) { animation-delay: .025s; }.listRow:nth-child(3) { animation-delay: .05s; }.listRow:nth-child(4) { animation-delay: .075s; }.listRow:nth-child(5) { animation-delay: .1s; }
 .listRow { animation: settingsListIn .22s ease both; }
 @keyframes settingsListIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.avatar img { width: 100%; height: 100%; border-radius: inherit; object-fit: cover; display: block; }
+.avatarUpload { display: flex; flex-direction: column; gap: 7px; color: var(--color-text-secondary); font-size: 13px; }
+.avatarUpload input { max-width: 280px; }
+.avatarUpload input { margin-right: 6px; }

@@ -10,7 +10,7 @@ export default async function Settings() {
   const canManageCompany = ["ADMIN", "HR_ADMIN", "MANAGER"].includes(user.role);
   const canEditOrganization = ["ADMIN", "HR_ADMIN"].includes(user.role);
 
-  const [company, policies, devices, leaveTypes, unreadNotifications] = await Promise.all([
+  const [company, policies, devices, leaveTypes, groups, unreadNotifications] = await Promise.all([
     db.companyProfile.findUnique({ where: { id: user.companyId }, select: { name: true, timezone: true, weekStartsOn: true } }),
     canManageCompany
       ? db.attendancePolicy.findMany({ where: { companyId: user.companyId }, orderBy: { version: "desc" }, select: { id: true, name: true, version: true, status: true, effectiveFrom: true, minimumDailyMinutes: true, overtimeMode: true } })
@@ -21,6 +21,7 @@ export default async function Settings() {
     canEditOrganization
       ? db.leaveType.findMany({ where: { companyId: user.companyId }, orderBy: { name: "asc" }, select: { id: true, name: true, unit: true } })
       : Promise.resolve([]),
+    canEditOrganization ? db.attendanceGroup.findMany({ where: { companyId: user.companyId, active: true }, orderBy: { name: "asc" }, select: { id: true, name: true } }) : Promise.resolve([]),
     db.notification.count({ where: { userId: user.id, readAt: null } }),
   ]);
 
@@ -47,6 +48,7 @@ export default async function Settings() {
         email: user.employee?.email ?? "",
         phone: user.employee?.phone ?? "",
         employeeCode: user.employee?.employeeCode ?? "—",
+        avatarUrl: user.avatarUrl,
       }}
       company={company}
       canManageCompany={canManageCompany}
@@ -55,6 +57,7 @@ export default async function Settings() {
       policies={policies.map((policy) => ({ ...policy, effectiveFrom: policy.effectiveFrom.toISOString() }))}
       devices={devices}
       leaveTypes={leaveTypes}
+      groups={groups}
     />
   );
 }
