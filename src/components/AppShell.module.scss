@@ -1,6 +1,7 @@
 .shell {
   --sidebar-width: 76px;
   min-height: 100vh;
+  min-height: 100dvh;
   background: var(--color-bg-secondary);
 }
 
@@ -16,6 +17,7 @@
   flex-direction: column;
   width: var(--sidebar-width);
   height: calc(100vh - 40px);
+  height: calc(100dvh - 40px);
   min-width: 0;
   padding: 18px 11px 14px;
   overflow: hidden;
@@ -648,6 +650,8 @@
 .content {
   min-width: 0;
   height: 100vh;
+  height: 100dvh;
+  min-height: 100dvh;
   overflow: hidden;
   margin-right: calc(var(--sidebar-width) + 40px);
   padding: 20px;
@@ -777,12 +781,15 @@
 
   .sidebar,
   .sidebar.expanded {
-    width: 286px;
-    height: calc(100vh - 40px);
-    padding: 18px 16px 14px;
-    box-shadow: var(--shadow-md);
+    inset: 12px 12px 12px auto;
+    width: min(340px, calc(100vw - 24px));
+    height: calc(100vh - 24px);
+    height: calc(100dvh - 24px);
+    padding: 20px 14px 14px;
+    border-radius: 24px;
+    box-shadow: -18px 18px 50px #1018282b;
     transform: translateX(110%);
-    transition: transform .3s cubic-bezier(.2, .8, .2, 1);
+    transition: transform .34s cubic-bezier(.2, .85, .25, 1);
   }
 
   .sidebar.mobileOpen {
@@ -800,6 +807,25 @@
     transform: none;
   }
 
+  .sidebar .brand {
+    min-height: 52px;
+    padding: 0 8px;
+    border-radius: 16px;
+    background: linear-gradient(100deg, var(--color-brand-soft), transparent);
+  }
+
+  .sidebar .brandMark { flex-basis: 44px; width: 44px; height: 44px; }
+  .sidebar .currentPath { margin: 19px 8px 10px; font-size: 10px; }
+  .sidebar .nav { gap: 5px; }
+  .sidebar .groupLabel { margin: 16px 10px 6px; }
+  .sidebar .nav button { min-height: 52px; padding: 0 13px; border-radius: 14px; }
+  .sidebar .nav button.active { box-shadow: 0 5px 14px color-mix(in srgb, var(--color-brand-primary) 12%, transparent); }
+  .sidebar .sidebarBottom { padding-top: 12px; }
+  .sidebar .utilityRow { gap: 4px; padding: 5px; border: 1px solid var(--color-border-secondary); border-radius: 15px; background: var(--color-bg-secondary); }
+  .sidebar .utility { min-height: 40px; border-radius: 11px; }
+  .sidebar .accountArea { margin-top: 10px; padding: 5px; border: 1px solid var(--color-border-secondary); border-radius: 16px; background: var(--color-bg-secondary); }
+  .sidebar .accountTrigger { min-height: 48px; padding: 0 8px; }
+
   .sidebar .currentPath,
   .sidebar .groupLabel {
     visibility: visible;
@@ -810,7 +836,7 @@
     opacity: 1;
   }
 
-  .content { margin-right: 0; padding: 12px; }
+  .content { margin-right: 0; padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom)); }
 
   .menu {
     display: grid;
@@ -828,6 +854,7 @@
   .overlay {
     position: fixed;
     inset: 0;
+    height: 100dvh;
     z-index: 19;
     display: block;
     border: 0;
@@ -835,17 +862,17 @@
     animation: fadeIn .2s ease;
   }
 
-  .header { padding-right: 18px; padding-left: 18px; }
+  .header { flex-basis: 64px; height: 64px; padding-right: 14px; padding-left: 14px; border-radius: 16px; }
   .headerHint { display: none; }
   .main { padding: 24px 4px 12px 12px; }
   .footer { padding: 0 14px; }
 }
 
 @media (max-width: 480px) {
-  .header { height: 66px; border-radius: 15px; }
+  .header { height: 60px; flex-basis: 60px; border-radius: 15px; }
   .header .eyebrow { display: none; }
   .header h2 { font-size: 14px; }
-  .main { padding: 20px 2px 10px 10px; }
+  .main { padding: 18px 2px 10px 10px; }
   .footer { flex-wrap: wrap; height: auto; min-height: 42px; padding: 8px 12px; gap: 8px; }
   .footerBrand, .footerLinks { flex-basis: calc(50% - 8px); }
   .copyright { order: 3; flex-basis: 100%; }
