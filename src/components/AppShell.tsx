@@ -152,8 +152,8 @@ export default function AppShell({ children, user }: Props) {
       <header className={styles.header} aria-busy={Boolean(pendingHref)}>
         <AnimatePresence>{pendingHref && <motion.div className={styles.routeProgress} initial={{ scaleX: 0, opacity: 0 }} animate={{ scaleX: 1, opacity: 1 }} exit={{ scaleX: 0, opacity: 0 }} transition={{ duration: .28 }} aria-hidden="true" />}</AnimatePresence>
         <button className={styles.menu} onClick={() => setMobileOpen(true)} aria-label="باز کردن منو">☰</button>
-        <div className={styles.headerIdentity}><Image className={styles.headerMark} src="/assets/icon/OnTyme.png" alt="OnTyme" width={34} height={34} /><div><p className="eyebrow">فضای کاری شرکت</p><h2>OnTyme</h2></div></div>
-        <div className={styles.headerHint}><span className={styles.liveDot}/><span>همگام‌سازی فعال</span><small>امروز</small></div>
+        <div className={styles.headerIdentity}><Image className={styles.headerMark} src="/assets/icon/OnTyme.png" alt="OnTyme" width={38} height={38} /><div><p className="eyebrow">فضای کاری OnTyme</p><h2>مدیریت زمان و عملکرد</h2></div></div>
+        <div className={styles.headerTools}><div className={styles.headerHint}><span className={styles.liveDot}/><span>همگام‌سازی فعال</span><small>امروز</small></div><button type="button" className={styles.headerAction} onClick={toggleTheme} aria-label="تغییر پوسته"><AppIcon name="sun" size={18}/></button><button type="button" className={styles.headerMenuAccount} onClick={() => setAccountOpen((open) => !open)} aria-label="حساب کاربری"><AppIcon name="user" size={18}/></button></div>
       </header>
       <main className={styles.main}>
         <AnimatePresence mode="wait" initial={false}>
