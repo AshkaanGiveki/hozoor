@@ -3,7 +3,7 @@ import { db } from "./db";
 import { hashToken, randomToken } from "./security";
 import { RoleCode, UserStatus } from "@prisma/client";
 
-export const SESSION_COOKIE = "hozoor_session";
+export const SESSION_COOKIE = "ontyme_session";
 const SESSION_DAYS = 14;
 
 export async function createSession(userId: string) {
