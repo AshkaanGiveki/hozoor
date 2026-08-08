@@ -13,3 +13,6 @@ dev-server-3001.log
 dev-server-3001-error.log
 tsconfig.tsbuildinfo
 sidebar-*.png
+
+.vercel
+.env*

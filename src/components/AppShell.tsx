@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
+import Image from "next/image";
 import styles from "./AppShell.module.scss";
 
 type Props = {
@@ -101,8 +102,8 @@ export default function AppShell({ children, user }: Props) {
     >
       <div className={styles.sidebarTop}>
         <button type="button" className={styles.brand} onClick={() => go("/dashboard")} aria-label="داشبورد">
-          <span className={styles.brandMark}>ح</span>
-          <span className={styles.brandText}><strong>سامانه حضور</strong><small>Hozoor workspace</small></span>
+          <Image className={styles.brandMark} src="/assets/icon/OnTyme.png" alt="OnTyme" width={42} height={42} priority />
+          <span className={styles.brandText}><Image className={styles.brandTextImage} src="/assets/icon/OnTymeText.png" alt="OnTyme" width={132} height={32} priority /></span>
         </button>
         <span className={styles.currentPath}>{isActive("/dashboard") ? "نمای کلی سامانه" : "فضای کاری شرکت"}</span>
       </div>
@@ -151,7 +152,7 @@ export default function AppShell({ children, user }: Props) {
       <header className={styles.header} aria-busy={Boolean(pendingHref)}>
         <AnimatePresence>{pendingHref && <motion.div className={styles.routeProgress} initial={{ scaleX: 0, opacity: 0 }} animate={{ scaleX: 1, opacity: 1 }} exit={{ scaleX: 0, opacity: 0 }} transition={{ duration: .28 }} aria-hidden="true" />}</AnimatePresence>
         <button className={styles.menu} onClick={() => setMobileOpen(true)} aria-label="باز کردن منو">☰</button>
-        <div className={styles.headerIdentity}><span className={styles.headerMark}>ح</span><div><p className="eyebrow">فضای کاری شرکت</p><h2>سامانه حضور و مرخصی</h2></div></div>
+        <div className={styles.headerIdentity}><Image className={styles.headerMark} src="/assets/icon/OnTyme.png" alt="OnTyme" width={34} height={34} /><div><p className="eyebrow">فضای کاری شرکت</p><h2>سامانه حضور و مرخصی</h2></div></div>
         <div className={styles.headerHint}><span className={styles.liveDot}/><span>همگام‌سازی فعال</span><small>امروز</small></div>
       </header>
       <main className={styles.main}>
@@ -162,7 +163,7 @@ export default function AppShell({ children, user }: Props) {
         </AnimatePresence>
       </main>
       <footer className={styles.footer}>
-        <a className={styles.footerBrand} href="/dashboard" onClick={(event) => { event.preventDefault(); go("/dashboard"); }}><span className={styles.footerMark}>ح</span><span>سامانه حضور</span></a>
+        <a className={styles.footerBrand} href="/dashboard" onClick={(event) => { event.preventDefault(); go("/dashboard"); }}><Image className={styles.footerMark} src="/assets/icon/OnTyme.png" alt="OnTyme" width={22} height={22} /><Image src="/assets/icon/OnTymeText.png" alt="OnTyme" width={92} height={22} /></a>
         <span className={styles.copyright}>© {new Date().getFullYear()} سامانه حضور و مرخصی</span>
         <nav className={styles.footerLinks} aria-label="پیوندهای کمکی"><a href="/attendance" onClick={(event) => { event.preventDefault(); go("/attendance"); }}>راهنمای حضور</a><a href="/notifications" onClick={(event) => { event.preventDefault(); go("/notifications"); }}>پشتیبانی و اعلان‌ها</a></nav>
       </footer>
