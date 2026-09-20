@@ -38,6 +38,15 @@ const navItems: NavItem[] = [
   { href: "/employees", label: "کارکنان", caption: "افراد و حوزه مدیریتی", icon: "employees", roles: ["ADMIN", "HR_ADMIN", "MANAGER"] },
   { href: "/imports", label: "ورود اطلاعات", caption: "فایل‌های دستگاه تردد", icon: "imports", roles: ["ADMIN", "HR_ADMIN"] },
   { href: "/settings", label: "تنظیمات", caption: "قوانین و شرکت", icon: "settings", roles: ["ADMIN", "HR_ADMIN"] },
+  { href: "/schedules", label: "Schedules", caption: "Work shifts", icon: "settings", roles: ["ADMIN", "HR_ADMIN"] },
+  { href: "/holidays", label: "Holidays", caption: "Company calendar", icon: "settings", roles: ["ADMIN", "HR_ADMIN"] },
+  { href: "/devices", label: "Devices", caption: "Attendance sources", icon: "imports", roles: ["ADMIN", "HR_ADMIN"] },
+  { href: "/audit", label: "Audit log", caption: "Security history", icon: "reports", roles: ["ADMIN", "HR_ADMIN", "AUDITOR"] },
+  { href: "/leave-types", label: "Leave types", caption: "Leave administration", icon: "requests", roles: ["ADMIN", "HR_ADMIN"] },
+  { href: "/leave-balances", label: "Leave balances", caption: "Accrual and adjustments", icon: "reports", roles: ["ADMIN", "HR_ADMIN"] },
+  { href: "/self-attendance-settings", label: "Location controls", caption: "Self-service attendance", icon: "attendance", roles: ["ADMIN", "HR_ADMIN"] },
+  { href: "/payroll", label: "Payroll", caption: "Compensation and pay runs", icon: "reports", roles: ["ADMIN", "HR_ADMIN"] },
+  { href: "/payslips", label: "Payslips", caption: "My finalized payroll", icon: "reports", roles: ["EMPLOYEE", "MANAGER", "ADMIN", "HR_ADMIN"] },
 ];
 
 function AppIcon({ name, size = 19 }: { name: IconName; size?: number }) {
@@ -71,8 +80,8 @@ export default function AppShell({ children, user }: Props) {
   const router = useRouter();
   const path = usePathname();
   const visibleItems = useMemo(() => navItems.filter((item) => !item.roles || item.roles.includes(user.role)), [user.role]);
-  const workspaceItems = visibleItems.filter((item) => ["/dashboard", "/attendance", "/requests", "/approvals", "/reports"].includes(item.href));
-  const managementItems = visibleItems.filter((item) => ["/employees", "/imports", "/settings"].includes(item.href));
+  const workspaceItems = visibleItems.filter((item) => ["/dashboard", "/attendance", "/requests", "/approvals", "/reports", "/payslips"].includes(item.href));
+  const managementItems = visibleItems.filter((item) => ["/employees", "/imports", "/settings", "/schedules", "/holidays", "/devices", "/audit", "/leave-types", "/leave-balances", "/self-attendance-settings", "/payroll"].includes(item.href));
 
   useEffect(() => {
     const saved = localStorage.getItem("ontyme-theme");

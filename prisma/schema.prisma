@@ -78,6 +78,50 @@ DRAFT
 ACTIVE
 ARCHIVED
 }
+enum CompensationStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+enum PayrollRuleStatus {
+  DRAFT
+  APPROVED
+  RETIRED
+}
+enum PayrollPeriodStatus {
+  DRAFT
+  CALCULATED
+  IN_REVIEW
+  APPROVED
+  PAID
+  LOCKED
+  REVERSED
+  CORRECTED
+}
+enum PayrollLineType {
+  BASE_SALARY
+  ALLOWANCE
+  BONUS
+  COMMISSION
+  OVERTIME
+  HOLIDAY_PREMIUM
+  LEAVE_ADJUSTMENT
+  ABSENCE_DEDUCTION
+  TAX
+  EMPLOYEE_INSURANCE
+  EMPLOYER_INSURANCE
+  LOAN_REPAYMENT
+  ADVANCE_REPAYMENT
+  OTHER_DEDUCTION
+  OTHER_EARNING
+}
+enum PayrollPaymentStatus {
+  PENDING
+  SUBMITTED
+  PAID
+  FAILED
+  REVERSED
+}
 enum LedgerType {
 OPENING
 ACCRUAL
@@ -125,6 +169,12 @@ model CompanyProfile {
   reportExports ReportExport[]
   notifications Notification[]
   auditLogs AuditLog[]
+  compensationProfiles CompensationProfile[]
+  payrollRuleSets PayrollRuleSet[]
+  payrollPeriods PayrollPeriod[]
+  payrollPayments PayrollPayment[]
+  payrollAdjustments PayrollAdjustment[]
+  payrollPolicies PayrollPolicy[]
 }
 
 model CompanySetting {
@@ -159,11 +209,18 @@ model User {
   managerAssignments ManagerAssignment[] @relation("Manager")
   approvals ApprovalDecision[]
   notifications Notification[]
+  createdCompensationProfiles CompensationProfile[]
+  createdPayrollRuleSets PayrollRuleSet[] @relation("PayrollRuleCreator")
+  approvedPayrollRuleSets PayrollRuleSet[] @relation("PayrollRuleApprover")
+  createdPayrollPolicies PayrollPolicy[]
   auditLogs AuditLog[]
+  payrollAdjustments PayrollAdjustment[]
   createdPolicies AttendancePolicy[]
   createdImports ImportJob[]
   exports ReportExport[]
   savedFilters SavedReportFilter[]
+  createdPayrollPeriods PayrollPeriod[] @relation("PayrollPeriodCreator")
+  approvedPayrollPeriods PayrollPeriod[] @relation("PayrollPeriodApprover")
   @@unique([companyId,username])
   @@index([companyId,role])
 }
@@ -258,7 +315,11 @@ leaveRequests LeaveRequest[]
 offTimeRequests OffTimeRequest[]
 correctionRequests AttendanceCorrectionRequest[]
 deviceMappings DeviceEmployeeMapping[]
-notifications Notification[]
+  notifications Notification[]
+  compensationProfiles CompensationProfile[]
+  payrollRuns PayrollRun[]
+  payrollAdjustments PayrollAdjustment[]
+  payrollPayments PayrollPayment[]
 @@unique([companyId,employeeCode])
 @@index([companyId,teamId,managerId])
 @@index([companyId,groupId])
@@ -765,5 +826,191 @@ reportType String
 filters Json
 createdAt DateTime @default(now())
 user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+}
+
+model CompensationProfile {
+  id String @id @default(uuid())
+  companyId String
+  employeeId String
+  status CompensationStatus @default(DRAFT)
+  effectiveFrom DateTime
+  effectiveTo DateTime?
+  contractType String @default("STANDARD")
+  jobTitle String?
+  payrollIdentifier String?
+  baseSalary Decimal @db.Decimal(20, 0)
+  dailyRate Decimal? @db.Decimal(20, 0)
+  hourlyRate Decimal? @db.Decimal(20, 0)
+  components Json
+  taxStatus String @default("STANDARD")
+  insuranceStatus String @default("INSURED")
+  bankAccountLast4 String?
+  notes String?
+  createdById String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  company CompanyProfile @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  createdBy User @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  payrollRuns PayrollRun[]
+  @@index([companyId, employeeId, effectiveFrom])
+  @@index([employeeId, status])
+}
+
+model PayrollRuleSet {
+  id String @id @default(uuid())
+  companyId String
+  name String
+  calendarYear Int
+  version Int
+  status PayrollRuleStatus @default(DRAFT)
+  effectiveFrom DateTime
+  effectiveTo DateTime?
+  sourceReference String?
+  rules Json
+  checksum String
+  createdById String
+  approvedById String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  company CompanyProfile @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdBy User @relation("PayrollRuleCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  approvedBy User? @relation("PayrollRuleApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  payrollPeriods PayrollPeriod[]
+  @@unique([companyId, calendarYear, version])
+  @@index([companyId, calendarYear, status])
+}
+
+model PayrollPolicy {
+  id String @id @default(uuid())
+  companyId String
+  name String
+  version Int
+  status PolicyStatus @default(DRAFT)
+  effectiveFrom DateTime
+  effectiveTo DateTime?
+  settings Json
+  createdById String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  company CompanyProfile @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdBy User @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  payrollPeriods PayrollPeriod[]
+  @@unique([companyId, name, version])
+  @@index([companyId, effectiveFrom, status])
+}
+
+model PayrollPeriod {
+  id String @id @default(uuid())
+  companyId String
+  ruleSetId String
+  payrollPolicyId String?
+  year Int
+  month Int
+  startDate DateTime
+  endDate DateTime
+  status PayrollPeriodStatus @default(DRAFT)
+  calculatedAt DateTime?
+  approvedAt DateTime?
+  paidAt DateTime?
+  lockedAt DateTime?
+  createdById String
+  approvedById String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  company CompanyProfile @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  ruleSet PayrollRuleSet @relation(fields: [ruleSetId], references: [id], onDelete: Restrict)
+  payrollPolicy PayrollPolicy? @relation(fields: [payrollPolicyId], references: [id], onDelete: Restrict)
+  createdBy User @relation("PayrollPeriodCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  approvedBy User? @relation("PayrollPeriodApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  runs PayrollRun[]
+  adjustments PayrollAdjustment[]
+  payments PayrollPayment[]
+  @@unique([companyId, year, month])
+  @@index([companyId, status, startDate])
+}
+
+model PayrollRun {
+  id String @id @default(uuid())
+  periodId String
+  employeeId String
+  compensationProfileId String
+  snapshot Json
+  grossAmount Decimal @db.Decimal(20, 0)
+  taxableAmount Decimal @db.Decimal(20, 0)
+  insurableAmount Decimal @db.Decimal(20, 0)
+  employeeInsurance Decimal @db.Decimal(20, 0)
+  employerInsurance Decimal @db.Decimal(20, 0)
+  taxAmount Decimal @db.Decimal(20, 0)
+  totalDeductions Decimal @db.Decimal(20, 0)
+  netPayable Decimal @db.Decimal(20, 0)
+  paidAmount Decimal? @db.Decimal(20, 0)
+  publishedAt DateTime?
+  acknowledgedAt DateTime?
+  calculatedAt DateTime @default(now())
+  period PayrollPeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  compensationProfile CompensationProfile @relation(fields: [compensationProfileId], references: [id], onDelete: Restrict)
+  lines PayrollLine[]
+  adjustments PayrollAdjustment[]
+  payment PayrollPayment?
+  @@unique([periodId, employeeId])
+  @@index([employeeId, calculatedAt])
+}
+
+model PayrollLine {
+  id String @id @default(uuid())
+  payrollRunId String
+  type PayrollLineType
+  code String
+  label String
+  quantity Decimal? @db.Decimal(20, 4)
+  rate Decimal? @db.Decimal(20, 4)
+  amount Decimal @db.Decimal(20, 0)
+  sourceData Json?
+  payrollRun PayrollRun @relation(fields: [payrollRunId], references: [id], onDelete: Cascade)
+  @@index([payrollRunId, type])
+}
+
+model PayrollAdjustment {
+  id String @id @default(uuid())
+  companyId String
+  periodId String
+  employeeId String
+  payrollRunId String?
+  code String
+  label String
+  amount Decimal @db.Decimal(20, 0)
+  taxable Boolean @default(false)
+  insurable Boolean @default(false)
+  reason String
+  createdById String
+  createdAt DateTime @default(now())
+  company CompanyProfile @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  period PayrollPeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  payrollRun PayrollRun? @relation(fields: [payrollRunId], references: [id], onDelete: SetNull)
+  createdBy User @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  @@index([companyId, periodId, employeeId])
+}
+
+model PayrollPayment {
+  id String @id @default(uuid())
+  companyId String
+  periodId String
+  employeeId String
+  payrollRunId String @unique
+  amount Decimal @db.Decimal(20, 0)
+  status PayrollPaymentStatus @default(PENDING)
+  paymentReference String?
+  paidAt DateTime?
+  failureReason String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  company CompanyProfile @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  period PayrollPeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  payrollRun PayrollRun @relation(fields: [payrollRunId], references: [id], onDelete: Restrict)
+  @@index([companyId, periodId, status])
 }
 

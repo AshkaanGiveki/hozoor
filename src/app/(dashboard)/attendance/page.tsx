@@ -3,6 +3,7 @@ import { db } from "@/server/db";
 import { employeeScopeWhere } from "@/server/permissions";
 import AttendanceCalendar, { type AttendanceCalendarRecord } from "@/components/AttendanceCalendar";
 import styles from "./page.module.scss";
+import SelfAttendanceActions from "@/components/SelfAttendanceActions";
 
 const statusLabels: Record<string, string> = {
   INSUFFICIENT_TIME: "کمبود ساعت کاری",
@@ -64,6 +65,7 @@ export default async function Attendance() {
           <p className={styles.subtitle}>وضعیت ورود، خروج و کارکرد روزانه را در یک نگاه ببینید.</p>
         </div>
         <div className={styles.headerActions}>
+          {user.employee && <SelfAttendanceActions />}
           <a className="button secondary" href="/reports">گزارش کامل</a>
           <a className="button primary" href="/requests?kind=correction">درخواست اصلاح تردد</a>
         </div>

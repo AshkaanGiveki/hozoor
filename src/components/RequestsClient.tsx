@@ -11,10 +11,10 @@ const timeToMinutes = (value: unknown) => {
   return hours * 60 + minutes;
 };
 
-type Props = { types: { id: string; name: string; unit: string }[]; initial: { leave: unknown[]; offtime: unknown[]; correction: unknown[] } };
+type Props = { types: { id: string; name: string; unit: string }[]; balances: Array<{ id: string; leaveTypeName: string; unit: string; availableMinutes: number; year: number }>; initial: { leave: unknown[]; offtime: unknown[]; correction: unknown[] } };
 const labels: Record<string, string> = { SUBMITTED: "ثبت‌شده", PENDING_MANAGER: "در انتظار مدیر", PENDING_ADMIN: "در انتظار منابع انسانی", APPROVED: "تأییدشده", REJECTED: "ردشده", CANCELLED: "لغوشده" };
 
-export default function RequestsClient({ types, initial }: Props) {
+export default function RequestsClient({ types, balances, initial }: Props) {
   const [kind, setKind] = useState<"leave" | "offtime" | "correction">("leave");
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -35,8 +35,18 @@ export default function RequestsClient({ types, initial }: Props) {
     const proposedOut = String(form.get("proposedOut") || "");
     if (kind === "leave" && startDate && endDate && startDate > endDate) { setMessage("تاریخ شروع باید قبل از تاریخ پایان باشد."); setSubmitting(false); return; }
     if (kind === "correction" && proposedIn && proposedOut && proposedIn > proposedOut) { setMessage("زمان ورود باید قبل از زمان خروج باشد."); setSubmitting(false); return; }
+    let attachmentId: string | undefined;
+    const attachment = form.get("attachment");
+    if (kind === "leave" && attachment instanceof File && attachment.size > 0) {
+      const upload = new FormData();
+      upload.append("file", attachment);
+      const uploadResponse = await fetch("/api/v1/attachments", { method: "POST", body: upload });
+      const uploadResult = await uploadResponse.json();
+      if (!uploadResponse.ok) { setMessage(uploadResult.error?.message || "ÙØ§ÛŒÙ„ Ø°Ø®ÛŒØ±Ù‡ Ù†Ø´Ø¯."); setSubmitting(false); return; }
+      attachmentId = uploadResult.data.id;
+    }
     const body = kind === "leave"
-      ? { kind, leaveTypeId: form.get("leaveTypeId"), startDate, endDate, requestedMinutes: Number(form.get("requestedMinutes")), reason: form.get("reason") }
+      ? { kind, leaveTypeId: form.get("leaveTypeId"), startDate, endDate, requestedMinutes: Number(form.get("requestedMinutes")), reason: form.get("reason"), attachmentId }
       : kind === "offtime"
         ? { kind, date: form.get("date"), startMinutes: timeToMinutes(form.get("startMinutes")), endMinutes: timeToMinutes(form.get("endMinutes")), reason: form.get("reason") }
         : { kind, date: form.get("date"), proposedIn: proposedIn || undefined, proposedOut: proposedOut || undefined, reason: form.get("reason") };
@@ -61,6 +71,7 @@ export default function RequestsClient({ types, initial }: Props) {
       <div><p className="eyebrow">چرخهٔ درخواست</p><h1>درخواست‌های من</h1><p>ثبت و پیگیری مرخصی، خروج ساعتی و اصلاح تردد</p></div>
       <div className={styles.titleBadge}><span className={styles.titleBadgeDot}/>پیگیری شفاف درخواست‌ها</div>
     </div>
+    {balances.length > 0 && <section className="card" style={{ marginBottom: 18 }}><div className="cardHead"><div><h3>Ù…Ø§Ù†Ø¯Ù‡ Ù…Ø±Ø®ØµÛŒ</h3><p>Ù…ÛŒØ²Ø§Ù† Ù‚Ø§Ø¨Ù„ Ø§Ø³ØªÙØ§Ø¯Ù‡ Ø¯Ø± Ø³Ø§Ù„ {balances[0].year}</p></div></div><div className={styles.list}>{balances.map((balance) => <div className={styles.item} key={balance.id}><div><strong>{balance.leaveTypeName}</strong><small>{balance.unit === "DAY" ? "ÙˆØ§Ø­Ø¯ Ø±ÙˆØ²Ø§Ù†Ù‡" : "ÙˆØ§Ø­Ø¯ Ø³Ø§Ø¹ØªÛŒ"}</small></div><span className="status present">{Math.floor(balance.availableMinutes / 60)}: {String(balance.availableMinutes % 60).padStart(2, "0")} Ø¯Ù‚ÛŒÙ‚Ù‡</span></div>)}</div></section>}
     <div className={styles.layout}>
       <section className="card">
         <div className={styles.formIntro}><span className={styles.formIcon}>＋</span><div><h3>درخواست جدید</h3><p>اطلاعات را وارد کنید تا برای بررسی ارسال شود.</p></div></div>
@@ -68,6 +79,7 @@ export default function RequestsClient({ types, initial }: Props) {
           {[["leave", "مرخصی"], ["offtime", "خروج ساعتی"], ["correction", "اصلاح تردد"]].map(([id, label]) => <button type="button" role="tab" aria-selected={kind === id} key={id} className={kind === id ? styles.selected : ""} onClick={() => { setKind(id as typeof kind); setMessage(""); }}>{label}</button>)}
         </div>
         <form className="stack" onSubmit={submit}>
+          <label>Ù¾ÛŒÙˆØ³Øª Ø¯Ø±Ø®ÙˆØ§Ø³Øª (Ø§Ø®ØªÛŒØ§Ø±ÛŒ)<input name="attachment" type="file" accept="application/pdf,image/jpeg,image/png,image/webp,text/plain" /></label>
           {kind === "leave" && <>
             <label>نوع مرخصی<SelectField name="leaveTypeId" required placeholder="انتخاب نوع مرخصی" options={types.map((type) => ({ value: type.id, label: `${type.name} (${type.unit === "DAY" ? "روزانه" : "ساعتی"})` }))} /></label>
             <div className={styles.two}><label>از تاریخ<JalaliDatePicker name="startDate" value={startDate} onChange={setStartDate} required maxValue={endDate || undefined}/></label><label>تا تاریخ<JalaliDatePicker name="endDate" value={endDate} onChange={setEndDate} required minValue={startDate || undefined}/></label></div>

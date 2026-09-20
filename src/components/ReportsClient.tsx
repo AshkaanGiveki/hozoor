@@ -43,6 +43,7 @@ export default function ReportsClient({ initial }: { initial: any[] }) {
   return <>
     <div className="sectionTitle"><div><p className="eyebrow">گزارش‌های واقعی از پایگاه داده</p><h1>گزارش عملکرد</h1><p>بازهٔ زمانی و خروجی قابل استفاده برای منابع انسانی</p></div><a className="button primary" href={`/api/v1/reports/attendance?format=csv${from ? `&from=${from}` : ""}${to ? `&to=${to}` : ""}`}>دریافت CSV</a></div>
 
+    <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginBottom: 12 }}><a className="button secondary" href={`/api/v1/reports/attendance?format=csv${from ? `&from=${from}` : ""}${to ? `&to=${to}` : ""}`}>CSV</a><a className="button primary" href={`/api/v1/reports/attendance?format=xlsx${from ? `&from=${from}` : ""}${to ? `&to=${to}` : ""}`}>XLSX</a></div>
     <section className={styles.controlsCard}>
       <div className={styles.controlsHeader}><div><h2>بازه گزارش</h2><p>داده‌های metrics و فهرست جزئیات با همین بازه به‌روزرسانی می‌شوند.</p></div><span className={styles.liveBadge}><i />داده زنده</span></div>
       <div className="filterBar"><label>از تاریخ<JalaliDatePicker name="from" value={from} onChange={setFrom} maxValue={to || undefined} /></label><label>تا تاریخ<JalaliDatePicker name="to" value={to} onChange={setTo} minValue={from || undefined} /></label><button className="button secondary" onClick={load}>اعمال فیلتر</button></div>{message && <div className="alert" role="alert">{message}</div>}

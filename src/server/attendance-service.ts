@@ -5,12 +5,25 @@ import { EventType, DayStatus } from "@prisma/client";
 export async function recalculateAttendanceDay(companyId: string, employeeId: string, date: Date) {
   const day = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
   const next = new Date(day.getTime() + 86400000);
-  const employee = await db.employee.findFirst({ where: { id: employeeId, companyId }, select: { groupId: true } });
+  const employee = await db.employee.findFirst({
+    where: { id: employeeId, companyId },
+    select: {
+      groupId: true,
+      scheduleAssignments: {
+        where: { startDate: { lte: day }, OR: [{ endDate: null }, { endDate: { gte: day } }] },
+        orderBy: { startDate: "desc" },
+        take: 1,
+        include: { schedule: { include: { shifts: { orderBy: { startMinutes: "asc" } } } } },
+      },
+    },
+  });
   if (!employee) return null;
   const groupAssignment = employee.groupId ? await db.policyAssignment.findFirst({ where: { groupId: employee.groupId, startDate: { lte: day }, OR: [{ endDate: null }, { endDate: { gte: day } }] }, include: { policy: { include: { dailyRules: true } } }, orderBy: { startDate: "desc" } }) : null;
   const policy = groupAssignment?.policy ?? await db.attendancePolicy.findFirst({ where: { companyId, status: "ACTIVE", effectiveFrom: { lte: day }, OR: [{ effectiveTo: null }, { effectiveTo: { gte: day } }], policyAssignments: { none: {} } }, include: { dailyRules: true }, orderBy: { version: "desc" } }) ?? await db.attendancePolicy.findFirst({ where: { companyId, status: "ACTIVE", effectiveFrom: { lte: day } }, include: { dailyRules: true }, orderBy: { version: "desc" } });
   if (!policy) return null;
-  const rule = policy.dailyRules.find((r) => r.weekday === day.getUTCDay()) ?? { isWorkingDay: false, startMinutes: null, endMinutes: null, flexibleEntryUntil: null, flexibleExitFrom: null, requiredMinutes: 0, minimumMinutes: 0, breakMinutes: 0 };
+  const policyRule = policy.dailyRules.find((r) => r.weekday === day.getUTCDay()) ?? { isWorkingDay: false, startMinutes: null, endMinutes: null, flexibleEntryUntil: null, flexibleExitFrom: null, requiredMinutes: 0, minimumMinutes: 0, breakMinutes: 0 };
+  const scheduledShift = employee.scheduleAssignments[0]?.schedule.shifts[0];
+  const rule = scheduledShift ? { ...policyRule, startMinutes: scheduledShift.startMinutes, endMinutes: scheduledShift.endMinutes } : policyRule;
   const [raw, holiday, leaves, offTimes, corrections] = await Promise.all([
     db.rawAttendanceEvent.findMany({ where: { companyId, employeeId, timestamp: { gte: day, lt: next } }, orderBy: { timestamp: "asc" } }),
     db.holiday.findFirst({ where: { companyId, date: day } }),
