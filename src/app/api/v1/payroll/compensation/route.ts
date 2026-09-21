@@ -6,7 +6,7 @@ import { db } from "@/server/db";
 import { canManagePayroll, hasCompensationOverlap, isValidDateRange } from "@/server/payroll";
 import { getCurrentUser } from "@/server/auth";
 
-const component = z.object({ code: z.string().trim().min(1).max(80), label: z.string().trim().min(1).max(160), amount: z.number().int().nonnegative(), taxable: z.boolean().default(true), insurable: z.boolean().default(true) });
+const component = z.object({ code: z.string().trim().min(1).max(80), label: z.string().trim().min(1).max(160), type: z.enum(["ALLOWANCE", "BONUS", "COMMISSION", "BENEFIT", "OTHER_EARNING", "LOAN_REPAYMENT", "ADVANCE_REPAYMENT", "OTHER_DEDUCTION"]).default("ALLOWANCE"), amount: z.number().int().nonnegative(), taxable: z.boolean().default(true), insurable: z.boolean().default(true) });
 const schema = z.object({ employeeId: z.string().uuid(), effectiveFrom: z.coerce.date(), effectiveTo: z.coerce.date().nullable().optional(), status: z.nativeEnum(CompensationStatus).default(CompensationStatus.DRAFT), contractType: z.string().trim().min(1).max(40).default("STANDARD"), jobTitle: z.string().trim().max(160).nullable().optional(), payrollIdentifier: z.string().trim().max(80).nullable().optional(), baseSalary: z.number().int().nonnegative(), dailyRate: z.number().int().nonnegative().nullable().optional(), hourlyRate: z.number().int().nonnegative().nullable().optional(), components: z.array(component).max(100).default([]), taxStatus: z.string().trim().min(1).max(40).default("STANDARD"), insuranceStatus: z.string().trim().min(1).max(40).default("INSURED"), bankAccountLast4: z.string().regex(/^\\d{4}$/).nullable().optional(), notes: z.string().max(2000).nullable().optional() });
 
 export async function GET() {

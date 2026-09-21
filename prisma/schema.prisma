@@ -103,6 +103,7 @@ enum PayrollLineType {
   ALLOWANCE
   BONUS
   COMMISSION
+  BENEFIT
   OVERTIME
   HOLIDAY_PREMIUM
   LEAVE_ADJUSTMENT
@@ -221,6 +222,7 @@ model User {
   savedFilters SavedReportFilter[]
   createdPayrollPeriods PayrollPeriod[] @relation("PayrollPeriodCreator")
   approvedPayrollPeriods PayrollPeriod[] @relation("PayrollPeriodApprover")
+  confirmedPayrollPayments PayrollPayment[] @relation("PayrollPaymentConfirmer")
   @@unique([companyId,username])
   @@index([companyId,role])
 }
@@ -810,13 +812,18 @@ id String @id @default(uuid())
 companyId String
 createdById String
 reportType String
-filename String
-storageName String
-filters Json
+  filename String
+  storageName String
+  filters Json
+  schemaVersion Int @default(1)
+  checksum String @default("")
+  idempotencyKey String?
+  sourceSnapshot Json?
 createdAt DateTime @default(now())
 expiresAt DateTime?
 company CompanyProfile @relation(fields:[companyId],references:[id],onDelete:Cascade)
-createdBy User @relation(fields:[createdById],references:[id],onDelete:Restrict)
+  createdBy User @relation(fields:[createdById],references:[id],onDelete:Restrict)
+  @@unique([companyId, reportType, idempotencyKey])
 }
 model SavedReportFilter {
 id String @id @default(uuid())
@@ -907,6 +914,7 @@ model PayrollPeriod {
   payrollPolicyId String?
   year Int
   month Int
+  revision Int @default(0)
   startDate DateTime
   endDate DateTime
   status PayrollPeriodStatus @default(DRAFT)
@@ -916,6 +924,10 @@ model PayrollPeriod {
   lockedAt DateTime?
   createdById String
   approvedById String?
+  correctionOfId String?
+  correctionReason String?
+  reversalReason String?
+  reversedAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   company CompanyProfile @relation(fields: [companyId], references: [id], onDelete: Cascade)
@@ -923,10 +935,12 @@ model PayrollPeriod {
   payrollPolicy PayrollPolicy? @relation(fields: [payrollPolicyId], references: [id], onDelete: Restrict)
   createdBy User @relation("PayrollPeriodCreator", fields: [createdById], references: [id], onDelete: Restrict)
   approvedBy User? @relation("PayrollPeriodApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  correctionOf PayrollPeriod? @relation("PayrollCorrection", fields: [correctionOfId], references: [id], onDelete: Restrict)
+  corrections PayrollPeriod[] @relation("PayrollCorrection")
   runs PayrollRun[]
   adjustments PayrollAdjustment[]
   payments PayrollPayment[]
-  @@unique([companyId, year, month])
+  @@unique([companyId, year, month, revision])
   @@index([companyId, status, startDate])
 }
 
@@ -1005,12 +1019,15 @@ model PayrollPayment {
   paymentReference String?
   paidAt DateTime?
   failureReason String?
+  confirmedById String?
+  confirmedAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   company CompanyProfile @relation(fields: [companyId], references: [id], onDelete: Cascade)
   period PayrollPeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
   employee Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict)
   payrollRun PayrollRun @relation(fields: [payrollRunId], references: [id], onDelete: Restrict)
+  confirmedBy User? @relation("PayrollPaymentConfirmer", fields: [confirmedById], references: [id], onDelete: SetNull)
   @@index([companyId, periodId, status])
 }
 

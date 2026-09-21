@@ -4,7 +4,7 @@ import { z } from "zod";
 import { audit } from "@/server/audit";
 import { getCurrentUser } from "@/server/auth";
 import { db } from "@/server/db";
-import { canManagePayroll, isValidDateRange } from "@/server/payroll";
+import { canManagePayroll, hasPolicyOverlap, isValidDateRange, validatePayrollPolicy } from "@/server/payroll";
 
 const schema = z.object({ name: z.string().trim().min(2).max(120), version: z.number().int().positive(), effectiveFrom: z.coerce.date(), effectiveTo: z.coerce.date().nullable().optional(), settings: z.record(z.unknown()) });
 
@@ -20,6 +20,9 @@ export async function POST(request: Request) {
   const parsed = schema.safeParse(await request.json().catch(() => ({})));
   if (!parsed.success || !isValidDateRange(parsed.data.effectiveFrom, parsed.data.effectiveTo)) return NextResponse.json({ error: { code: "VALIDATION_ERROR", message: "Payroll policy dates or values are invalid." } }, { status: 400 });
   const input = parsed.data;
+  const policyError = validatePayrollPolicy(input.settings);
+  if (policyError) return NextResponse.json({ error: { code: "VALIDATION_ERROR", message: policyError } }, { status: 400 });
+  if (await hasPolicyOverlap(user.companyId, input.name, input.effectiveFrom, input.effectiveTo)) return NextResponse.json({ error: { code: "CONFLICT", message: "Policy effective dates overlap another version with the same name." } }, { status: 409 });
   try {
     const policy = await db.payrollPolicy.create({ data: { companyId: user.companyId, name: input.name, version: input.version, effectiveFrom: input.effectiveFrom, effectiveTo: input.effectiveTo ?? null, settings: input.settings as Prisma.InputJsonValue, createdById: user.id, status: PolicyStatus.DRAFT } });
     await audit({ companyId: user.companyId, actorId: user.id, action: "payroll.policy.create", entityType: "PayrollPolicy", entityId: policy.id, after: input });
