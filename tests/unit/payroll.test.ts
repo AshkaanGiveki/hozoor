@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { canApprovePayrollPeriod, canConfirmPayrollPayment, checksumRules, payrollPeriodTransitions, simulatePayrollPolicy, validateCompensationMinimum, validateLegalRules, validatePayrollPolicy, validateRuleSetApproval } from "@/server/payroll";
-import { isEarningComponent } from "@/server/payroll-engine";
+import { calculateOvertimePay, calculateProgressiveTax, capInsurableBase, isEarningComponent, roundPayrollAmount } from "@/server/payroll-engine";
 import { reconcilePayrollTotals, summarizePayrollRegister } from "@/server/payroll-reporting";
 import { Prisma } from "@prisma/client";
 import { buildAuditHash, verifyAuditChain } from "@/server/audit";
@@ -83,6 +83,15 @@ describe("payroll rule safety", () => {
     expect(validateCompensationMinimum(9_000, { minimumMonthlySalary: 10_000 })).toContain("minimum monthly salary");
     expect(validateCompensationMinimum(10_000, { minimumMonthlySalary: 10_000 })).toBeNull();
     expect(validateCompensationMinimum(9_000, { taxRate: 0.1 })).toBeNull();
+  });
+
+  it("covers payroll formula boundaries and rounding modes", () => {
+    expect(roundPayrollAmount(new Prisma.Decimal("1.5"))).toEqual(new Prisma.Decimal(2));
+    expect(roundPayrollAmount(new Prisma.Decimal("1.9"), "floor")).toEqual(new Prisma.Decimal(1));
+    expect(roundPayrollAmount(new Prisma.Decimal("1.1"), "ceil")).toEqual(new Prisma.Decimal(2));
+    expect(calculateOvertimePay(new Prisma.Decimal(120), 30, 1.4)).toEqual(new Prisma.Decimal(84));
+    expect(capInsurableBase(new Prisma.Decimal(150), 100)).toEqual(new Prisma.Decimal(100));
+    expect(calculateProgressiveTax(new Prisma.Decimal(150), { taxExemption: 50, taxBrackets: [{ upTo: 100, rate: 0.1 }, { rate: 0.2 }] })).toEqual(new Prisma.Decimal(10));
   });
 
   it("rejects legal overrides and simulates policy-only choices", () => {
