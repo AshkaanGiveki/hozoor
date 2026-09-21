@@ -1043,6 +1043,7 @@ model PayrollRun {
   employeeId            String
   compensationProfileId String
   snapshot              Json
+  snapshotChecksum      String?
   grossAmount           Decimal             @db.Decimal(20, 0)
   taxableAmount         Decimal             @db.Decimal(20, 0)
   insurableAmount       Decimal             @db.Decimal(20, 0)

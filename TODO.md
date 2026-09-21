@@ -139,9 +139,9 @@ Each item must include server-side authorization, validation, UI coverage where 
 
 - [ ] No production payroll until the supported legal scope and annual rule tables are approved.
 - [ ] No report may use a different salary source from the payment calculation.
-- [ ] No finalized payroll may be silently changed.
-- [ ] Every employee-facing amount must be explainable from stored source data and a versioned formula.
-- [ ] Every exported or submitted amount must trace back to the finalized payroll snapshot.
+- [x] No finalized payroll may be silently changed.
+- [x] Every employee-facing amount must be explainable from stored source data and a versioned formula.
+- [x] Every exported or submitted amount must trace back to the finalized payroll snapshot.
 
 ## External inputs still required
 
