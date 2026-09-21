@@ -3,13 +3,23 @@ import { canApprovePayrollPeriod, canConfirmPayrollPayment, checksumRules, payro
 import { isEarningComponent } from "@/server/payroll-engine";
 import { reconcilePayrollTotals, summarizePayrollRegister } from "@/server/payroll-reporting";
 import { Prisma } from "@prisma/client";
-import { buildAuditHash } from "@/server/audit";
+import { buildAuditHash, verifyAuditChain } from "@/server/audit";
 import { createPayrollIntegrationPayload } from "@/server/payroll-integration";
 
 describe("payroll rule safety", () => {
   it("changes the audit hash when chained audit content changes", () => {
     const base = { companyId: "c", action: "payroll.view", entityType: "PayrollRun", entityId: "r", previousHash: null, createdAt: new Date("2026-01-01T00:00:00.000Z") };
     expect(buildAuditHash({ ...base, after: { net: "100" } })).not.toBe(buildAuditHash({ ...base, after: { net: "101" } }));
+  });
+
+  it("detects a broken audit chain", () => {
+    const createdAt = new Date("2026-01-01T00:00:00.000Z");
+    const first = { id: "a1", companyId: "c", actorId: null, action: "x", entityType: "y", entityId: null, requestId: null, before: null, after: { value: 1 }, previousHash: null, hash: "", createdAt };
+    first.hash = buildAuditHash({ companyId: first.companyId, action: first.action, entityType: first.entityType, before: first.before, after: first.after, previousHash: first.previousHash, createdAt: first.createdAt });
+    const second = { ...first, id: "a2", after: { value: 2 }, previousHash: first.hash, hash: "", createdAt: new Date("2026-01-01T00:01:00.000Z") };
+    second.hash = buildAuditHash({ companyId: second.companyId, action: second.action, entityType: second.entityType, before: second.before, after: second.after, previousHash: second.previousHash, createdAt: second.createdAt });
+    expect(verifyAuditChain([first, second]).valid).toBe(true);
+    expect(verifyAuditChain([{ ...first, after: { value: 9 } }, second]).valid).toBe(false);
   });
 
   it("builds a deterministic provider-neutral payroll payload", () => {
