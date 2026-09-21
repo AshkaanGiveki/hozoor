@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { canApprovePayrollPeriod, checksumRules, payrollPeriodTransitions, validateLegalRules } from "@/server/payroll";
+import { isEarningComponent } from "@/server/payroll-engine";
 
 describe("payroll rule safety", () => {
   it("requires a separate reviewer and an explicit review state", () => {
@@ -20,5 +21,11 @@ describe("payroll rule safety", () => {
 
   it("creates a stable rule checksum", () => {
     expect(checksumRules({ taxRate: 0.1 })).toBe(checksumRules({ taxRate: 0.1 }));
+  });
+
+  it("separates earning components from repayment deductions", () => {
+    expect(isEarningComponent({ code: "BONUS", label: "Bonus", type: "BONUS", amount: 100 })).toBe(true);
+    expect(isEarningComponent({ code: "LOAN", label: "Loan repayment", type: "LOAN_REPAYMENT", amount: 100 })).toBe(false);
+    expect(isEarningComponent({ code: "LEGACY", label: "Legacy allowance", amount: 100 })).toBe(true);
   });
 });
