@@ -1,6 +1,15 @@
 import crypto from "node:crypto";
 import { Prisma } from "@prisma/client";
 
+export type IntegrationSubmissionOutcome = { status: "SUCCEEDED" | "RETRYING" | "FAILED"; nextAttemptAt: Date | null };
+
+export function resolveIntegrationSubmissionOutcome(accepted: boolean, attemptCount: number, maxAttempts: number, now = new Date()): IntegrationSubmissionOutcome {
+  if (accepted) return { status: "SUCCEEDED", nextAttemptAt: null };
+  if (attemptCount >= maxAttempts) return { status: "FAILED", nextAttemptAt: null };
+  const delayMinutes = Math.min(60, 2 ** Math.max(0, attemptCount - 1));
+  return { status: "RETRYING", nextAttemptAt: new Date(now.getTime() + delayMinutes * 60 * 1000) };
+}
+
 export type PayrollIntegrationRow = {
   employeeId: string;
   employeeCode: string;

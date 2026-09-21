@@ -132,8 +132,8 @@ Each item must include server-side authorization, validation, UI coverage where 
 - [x] Add a provider-neutral payroll integration interface.
 - [ ] Add target-specific adapters only after the target systemâ€™s API/schema and authentication method are known.
 - [ ] Add tax, insurance, accounting, and bank integrations only with verified official/provider documentation.
-- [ ] Add idempotency, retries, failure queues, response storage, and integration audit history.
-- [ ] Never mark an external submission successful until the provider confirms it.
+- [x] Add idempotency, retries, failure queues, response storage, and integration audit history.
+- [x] Never mark an external submission successful until the provider confirms it.
 
 ## Payroll launch gates
 
