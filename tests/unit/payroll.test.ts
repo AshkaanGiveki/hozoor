@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canApprovePayrollPeriod, checksumRules, payrollPeriodTransitions, simulatePayrollPolicy, validateLegalRules, validatePayrollPolicy } from "@/server/payroll";
+import { canApprovePayrollPeriod, checksumRules, payrollPeriodTransitions, simulatePayrollPolicy, validateLegalRules, validatePayrollPolicy, validateRuleSetApproval } from "@/server/payroll";
 import { isEarningComponent } from "@/server/payroll-engine";
 import { summarizePayrollRegister } from "@/server/payroll-reporting";
 import { Prisma } from "@prisma/client";
@@ -45,5 +45,10 @@ describe("payroll rule safety", () => {
     expect(validatePayrollPolicy({ taxRate: 0.1 })).toContain("cannot define legal rule");
     expect(validatePayrollPolicy({ rounding: "floor", graceMinutes: 15, overtimeRequiresApproval: true, paymentDay: 25 })).toBeNull();
     expect(simulatePayrollPolicy({ rounding: "floor", overtimeRequiresApproval: true, paymentDay: 25 }, { requestedOvertimeMinutes: 120, approvedOvertimeMinutes: 60, amount: 100.9 })).toEqual({ overtimeMinutes: 60, roundedAmount: 100, paymentDay: 25, overtimeRequiresApproval: true });
+  });
+
+  it("requires a legal source before a rule set can be approved", () => {
+    expect(validateRuleSetApproval(null, { workingDays: 30 })).toContain("source reference");
+    expect(validateRuleSetApproval("Official circular 1", { workingDays: 30 })).toContain("Missing required");
   });
 });

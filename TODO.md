@@ -48,9 +48,9 @@ Each item must include server-side authorization, validation, UI coverage where 
 - [x] Define the payroll source-of-truth model: one employee, one compensation record, one payroll result, one payslip, and one payment record.
 - [x] Prohibit shadow salaries, duplicate salary bases, silent overwrites, and reports that differ from the actual payment.
 - [x] Document earned compensation, deductions, net payable, paid amount, and employer cost.
-- [ ] Define the supported Iranian employment/payroll scope and explicitly mark unsupported cases.
+- [x] Define the supported Iranian employment/payroll scope and explicitly mark unsupported cases.
 - [ ] Obtain and version the official annual Labour, Tax Administration, and Social Security rules before enabling production payroll.
-- [ ] Define the legal review and annual rule-update process.
+- [x] Define the legal review and annual rule-update process.
 
 ## P0 â€” employee compensation and contracts
 

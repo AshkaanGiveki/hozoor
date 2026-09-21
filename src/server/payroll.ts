@@ -39,6 +39,11 @@ export function validateLegalRules(rules: unknown) {
   return null;
 }
 
+export function validateRuleSetApproval(sourceReference: string | null | undefined, rules: unknown) {
+  if (!sourceReference?.trim()) return "An official source reference is required before approval.";
+  return validateLegalRules(rules);
+}
+
 export function isValidDateRange(start: Date, end?: Date | null) {
   return !end || end.getTime() > start.getTime();
 }
