@@ -115,7 +115,7 @@ Each item must include server-side authorization, validation, UI coverage where 
 - [x] Audit every payroll view, create, change, approval, export, payment, reversal, and download.
 - [x] Add immutable payroll snapshots and tamper-evident audit records.
 - [x] Separate compensation editing, payroll approval, and payment confirmation duties.
-- [ ] Preserve legally required payroll evidence through retention and archival policies.
+- [x] Preserve legally required payroll evidence through retention and archival policies.
 
 ## P1 â€” testing and legal safety
 
