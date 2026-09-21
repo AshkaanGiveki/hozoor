@@ -83,6 +83,8 @@ export function validatePayrollPolicy(settings: unknown) {
   if (record.rounding !== undefined && !["nearest-rial", "floor", "ceil"].includes(String(record.rounding))) return "Policy rounding must be nearest-rial, floor, or ceil.";
   if (record.graceMinutes !== undefined && (!Number.isInteger(record.graceMinutes) || (record.graceMinutes as number) < 0 || (record.graceMinutes as number) > 1440)) return "graceMinutes must be an integer from 0 to 1440.";
   if (record.overtimeRequiresApproval !== undefined && typeof record.overtimeRequiresApproval !== "boolean") return "overtimeRequiresApproval must be boolean.";
+  if (record.absenceDeductionMode !== undefined && !["NONE", "DAILY_BASE"].includes(String(record.absenceDeductionMode))) return "absenceDeductionMode must be NONE or DAILY_BASE.";
+  if (record.attendanceShortfallDeductionMode !== undefined && !["NONE", "HOURLY_BASE"].includes(String(record.attendanceShortfallDeductionMode))) return "attendanceShortfallDeductionMode must be NONE or HOURLY_BASE.";
   if (record.paymentDay !== undefined && (!Number.isInteger(record.paymentDay) || (record.paymentDay as number) < 1 || (record.paymentDay as number) > 31)) return "paymentDay must be between 1 and 31.";
   return null;
 }

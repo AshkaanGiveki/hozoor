@@ -67,7 +67,7 @@ Each item must include server-side authorization, validation, UI coverage where 
 ## P0 â€” legal calculation engine
 
 - [x] Create versioned annual legal rule tables; never hard-code yearly values in UI code.
-- [ ] Calculate ordinary wages, overtime, night work, Friday/holiday work, leave, absence, lateness, and early departure from actual source data.
+- [x] Calculate ordinary wages, overtime, night work, Friday/holiday work, leave, absence, lateness, and early departure from actual source data.
 - [ ] Calculate taxable bases, tax exemptions/brackets, employee insurance, employer insurance, ceilings, and required deductions.
 - [ ] Calculate annual benefits, seniority-related amounts, end-of-service/severance accruals, and final settlement items where in scope.
 - [x] Calculate official holidays from a versioned Persian-calendar holiday table.
@@ -97,6 +97,7 @@ Each item must include server-side authorization, validation, UI coverage where 
 ## P1 â€” company compensation policy
 
 - [x] Add configurable policies for rounding, grace periods, overtime approval, bonuses, commissions, loans, advances, and payment dates.
+- [x] Add explicit, auditable company-policy modes for unpaid absence and attendance shortfall deductions; default to no deduction.
 - [x] Ensure company policies cannot override mandatory legal requirements.
 - [x] Add policy effective dates, version history, assignments, precedence, and simulation before activation.
 - [x] Warn when a policy produces unlawful or inconsistent results.

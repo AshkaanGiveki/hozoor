@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { canApprovePayrollPeriod, canConfirmPayrollPayment, canManagePayroll, checksumRules, maskBankAccountLast4, payrollPeriodTransitions, productionPayrollGate, simulatePayrollPolicy, validateCompensationMinimum, validateLegalRules, validatePayrollPolicy, validateRuleSetApproval } from "@/server/payroll";
-import { applyPartTimeRatio, calculateInsuranceCeiling, calculateOvertimePay, calculateProgressiveTax, capInsurableBase, isEarningComponent, roundPayrollAmount } from "@/server/payroll-engine";
+import { applyPartTimeRatio, calculateAttendanceDeductions, calculateInsuranceCeiling, calculateOvertimePay, calculateProgressiveTax, capInsurableBase, isEarningComponent, roundPayrollAmount } from "@/server/payroll-engine";
 import { calculateIranianEidi, calculateIranianSeverance, iranianPrivateSector1405Rules } from "@/server/iranian-payroll-law";
 import { reconcilePayrollTotals, summarizePayrollRegister } from "@/server/payroll-reporting";
 import { Prisma, RoleCode } from "@prisma/client";
@@ -193,6 +193,14 @@ describe("payroll rule safety", () => {
     expect(validateCompensationMinimum(halfTimeMinimum - 1, { minimumMonthlySalary: halfTimeMinimum })).toContain("minimum monthly salary");
   });
 
+  it("calculates attendance deductions only when the company policy enables them", () => {
+    const daily = new Prisma.Decimal(1000);
+    const hourly = new Prisma.Decimal(125);
+    const attendance = { absenceDays: 1, leaveDays: 2, deficitMinutes: 60 };
+    expect(calculateAttendanceDeductions(daily, hourly, attendance)).toEqual({ absence: new Prisma.Decimal(0), shortfall: new Prisma.Decimal(0), total: new Prisma.Decimal(0) });
+    expect(calculateAttendanceDeductions(daily, hourly, attendance, { absenceDeductionMode: "DAILY_BASE", attendanceShortfallDeductionMode: "HOURLY_BASE" })).toEqual({ absence: new Prisma.Decimal(1000), shortfall: new Prisma.Decimal(125), total: new Prisma.Decimal(1125) });
+  });
+
   it("masks sensitive bank account suffixes at the response boundary", () => {
     expect(maskBankAccountLast4("1234")).toBe("••••1234");
     expect(maskBankAccountLast4(null)).toBeNull();
@@ -202,6 +210,8 @@ describe("payroll rule safety", () => {
     expect(validatePayrollPolicy({ taxRate: 0.1 })).toContain("cannot define legal rule");
     expect(validatePayrollPolicy({ rounding: "floor", graceMinutes: 15, overtimeRequiresApproval: true, paymentDay: 25 })).toBeNull();
     expect(simulatePayrollPolicy({ rounding: "floor", overtimeRequiresApproval: true, paymentDay: 25 }, { requestedOvertimeMinutes: 120, approvedOvertimeMinutes: 60, amount: 100.9 })).toEqual({ overtimeMinutes: 60, roundedAmount: 100, paymentDay: 25, overtimeRequiresApproval: true });
+    expect(validatePayrollPolicy({ absenceDeductionMode: "DAILY_BASE", attendanceShortfallDeductionMode: "HOURLY_BASE" })).toBeNull();
+    expect(validatePayrollPolicy({ absenceDeductionMode: "LEGAL_MAGIC" })).toContain("absenceDeductionMode");
   });
 
   it("requires a legal source before a rule set can be approved", () => {
