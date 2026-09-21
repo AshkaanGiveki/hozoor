@@ -811,13 +811,18 @@ id String @id @default(uuid())
 companyId String
 createdById String
 reportType String
-filename String
-storageName String
-filters Json
+  filename String
+  storageName String
+  filters Json
+  schemaVersion Int @default(1)
+  checksum String @default("")
+  idempotencyKey String?
+  sourceSnapshot Json?
 createdAt DateTime @default(now())
 expiresAt DateTime?
 company CompanyProfile @relation(fields:[companyId],references:[id],onDelete:Cascade)
-createdBy User @relation(fields:[createdById],references:[id],onDelete:Restrict)
+  createdBy User @relation(fields:[createdById],references:[id],onDelete:Restrict)
+  @@unique([companyId, reportType, idempotencyKey])
 }
 model SavedReportFilter {
 id String @id @default(uuid())

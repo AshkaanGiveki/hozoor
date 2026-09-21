@@ -105,7 +105,7 @@ Each item must include server-side authorization, validation, UI coverage where 
 - [x] Add employee calculation drill-down and formula explanations.
 - [ ] Add department/cost-center summaries and payroll register.
 - [x] Add tax, insurance, bank-payment, accounting, and payroll exports from the finalized payroll snapshot.
-- [ ] Add schema versioning, export history, checksums, permissions, and duplicate-submission protection.
+- [x] Add schema versioning, export history, checksums, permissions, and duplicate-submission protection.
 - [ ] Add reconciliation: calculated net, exported net, paid net, and unmatched records.
 
 ## P1 â€” security, privacy, and audit
