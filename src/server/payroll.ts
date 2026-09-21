@@ -1,9 +1,24 @@
 import crypto from "node:crypto";
-import { CompensationStatus, PayrollRuleStatus, RoleCode } from "@prisma/client";
+import { CompensationStatus, PayrollPeriodStatus, PayrollRuleStatus, RoleCode } from "@prisma/client";
 import { db } from "./db";
 
 export function canManagePayroll(role: RoleCode) {
   return role === RoleCode.ADMIN || role === RoleCode.HR_ADMIN;
+}
+
+export const payrollPeriodTransitions: Record<PayrollPeriodStatus, PayrollPeriodStatus[]> = {
+  DRAFT: [],
+  CALCULATED: [PayrollPeriodStatus.IN_REVIEW, PayrollPeriodStatus.CORRECTED],
+  IN_REVIEW: [PayrollPeriodStatus.APPROVED, PayrollPeriodStatus.CORRECTED],
+  APPROVED: [PayrollPeriodStatus.PAID, PayrollPeriodStatus.REVERSED],
+  PAID: [PayrollPeriodStatus.LOCKED, PayrollPeriodStatus.REVERSED],
+  LOCKED: [PayrollPeriodStatus.CORRECTED],
+  REVERSED: [],
+  CORRECTED: [PayrollPeriodStatus.CALCULATED],
+};
+
+export function canApprovePayrollPeriod(status: PayrollPeriodStatus, creatorId: string, approverId: string) {
+  return status === PayrollPeriodStatus.IN_REVIEW && creatorId !== approverId;
 }
 
 export function checksumRules(rules: unknown) {

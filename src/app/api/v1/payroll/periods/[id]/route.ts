@@ -4,10 +4,9 @@ import { z } from "zod";
 import { audit } from "@/server/audit";
 import { getCurrentUser } from "@/server/auth";
 import { db } from "@/server/db";
-import { canManagePayroll } from "@/server/payroll";
+import { canApprovePayrollPeriod, canManagePayroll, payrollPeriodTransitions } from "@/server/payroll";
 
 const schema = z.object({ status: z.enum([PayrollPeriodStatus.IN_REVIEW, PayrollPeriodStatus.APPROVED, PayrollPeriodStatus.PAID, PayrollPeriodStatus.LOCKED, PayrollPeriodStatus.REVERSED, PayrollPeriodStatus.CORRECTED]) });
-const transitions: Record<string, string[]> = { CALCULATED: ["IN_REVIEW", "CORRECTED"], IN_REVIEW: ["APPROVED", "CORRECTED"], APPROVED: ["PAID", "REVERSED"], PAID: ["LOCKED", "REVERSED"], LOCKED: ["CORRECTED"], CORRECTED: ["CALCULATED"] };
 
 export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
   void request;
@@ -28,7 +27,8 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   const existing = await db.payrollPeriod.findFirst({ where: { id, companyId: user.companyId }, include: { payments: true } });
   if (!existing) return NextResponse.json({ error: { code: "NOT_FOUND", message: "Payroll period not found." } }, { status: 404 });
   const next = parsed.data.status;
-  if (!transitions[existing.status]?.includes(next)) return NextResponse.json({ error: { code: "CONFLICT", message: `Cannot move payroll from ${existing.status} to ${next}.` } }, { status: 409 });
+  if (!payrollPeriodTransitions[existing.status].includes(next)) return NextResponse.json({ error: { code: "CONFLICT", message: `Cannot move payroll from ${existing.status} to ${next}.` } }, { status: 409 });
+  if (next === PayrollPeriodStatus.APPROVED && !canApprovePayrollPeriod(existing.status, existing.createdById, user.id)) return NextResponse.json({ error: { code: "MAKER_CHECKER_REQUIRED", message: "Payroll must be submitted for review and approved by a different payroll administrator." } }, { status: 409 });
   if (next === PayrollPeriodStatus.APPROVED && existing.payments.length === 0) return NextResponse.json({ error: { code: "CONFLICT", message: "A calculated payroll must contain payment records before approval." } }, { status: 409 });
   if (next === PayrollPeriodStatus.PAID && existing.payments.some((payment) => payment.status !== PayrollPaymentStatus.PAID)) return NextResponse.json({ error: { code: "CONFLICT", message: "Every employee payment must be confirmed before the payroll is marked paid." } }, { status: 409 });
   const data = { status: next, approvedAt: next === PayrollPeriodStatus.APPROVED ? new Date() : existing.approvedAt, approvedById: next === PayrollPeriodStatus.APPROVED ? user.id : existing.approvedById, paidAt: next === PayrollPeriodStatus.PAID ? new Date() : existing.paidAt, lockedAt: next === PayrollPeriodStatus.LOCKED ? new Date() : existing.lockedAt };

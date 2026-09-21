@@ -78,7 +78,7 @@ Each item must include server-side authorization, validation, UI coverage where 
 - [x] Snapshot attendance, leave, compensation, legal rules, and company policy when a payroll run is calculated.
 - [x] Make recalculation explicit and auditable.
 - [x] Prevent source-data changes from silently changing approved or paid payroll.
-- [ ] Add maker-checker approval for payroll finalization.
+- [x] Add maker-checker approval for payroll finalization.
 - [ ] Add controlled correction and reversal workflows instead of editing locked payroll.
 - [x] Reconcile every paid payroll result with a payment batch and payment reference.
 

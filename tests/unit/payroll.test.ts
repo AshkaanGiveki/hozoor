@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { checksumRules, validateLegalRules } from "@/server/payroll";
+import { canApprovePayrollPeriod, checksumRules, payrollPeriodTransitions, validateLegalRules } from "@/server/payroll";
 
 describe("payroll rule safety", () => {
+  it("requires a separate reviewer and an explicit review state", () => {
+    expect(canApprovePayrollPeriod("IN_REVIEW", "creator", "reviewer")).toBe(true);
+    expect(canApprovePayrollPeriod("IN_REVIEW", "creator", "creator")).toBe(false);
+    expect(canApprovePayrollPeriod("CALCULATED", "creator", "reviewer")).toBe(false);
+    expect(payrollPeriodTransitions.CALCULATED).toContain("IN_REVIEW");
+    expect(payrollPeriodTransitions.CALCULATED).not.toContain("APPROVED");
+  });
+
   it("rejects incomplete legal rules", () => {
     expect(validateLegalRules({ workingDays: 30 })).toContain("Missing required");
   });
