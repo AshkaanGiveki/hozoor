@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { audit } from "@/server/audit";
 import { db } from "@/server/db";
-import { canManagePayroll, hasCompensationOverlap, isValidDateRange, validateCompensationMinimum } from "@/server/payroll";
+import { canManagePayroll, hasCompensationOverlap, isValidDateRange, maskBankAccountLast4, validateCompensationMinimum } from "@/server/payroll";
 import { getCurrentUser } from "@/server/auth";
 
 const component = z.object({ code: z.string().trim().min(1).max(80), label: z.string().trim().min(1).max(160), type: z.enum(["ALLOWANCE", "BONUS", "COMMISSION", "BENEFIT", "OTHER_EARNING", "LOAN_REPAYMENT", "ADVANCE_REPAYMENT", "OTHER_DEDUCTION"]).default("ALLOWANCE"), amount: z.number().int().nonnegative(), taxable: z.boolean().default(true), insurable: z.boolean().default(true) });
@@ -13,7 +13,8 @@ export async function GET() {
   const user = await getCurrentUser();
   if (!user || !canManagePayroll(user.role)) return NextResponse.json({ error: { code: "FORBIDDEN", message: "Payroll administration access required." } }, { status: 403 });
   const rows = await db.compensationProfile.findMany({ where: { companyId: user.companyId }, include: { employee: { select: { id: true, employeeCode: true, firstName: true, lastName: true } }, department: { select: { id: true, name: true } }, createdBy: { select: { firstName: true, lastName: true } } }, orderBy: [{ employee: { lastName: "asc" } }, { effectiveFrom: "desc" }] });
-  return NextResponse.json({ data: rows });
+  await audit({ companyId: user.companyId, actorId: user.id, action: "payroll.compensation.list", entityType: "CompensationProfile", after: { count: rows.length } });
+  return NextResponse.json({ data: rows.map((row) => ({ ...row, bankAccountLast4: maskBankAccountLast4(row.bankAccountLast4) })) });
 }
 
 export async function POST(request: Request) {
@@ -34,5 +35,5 @@ export async function POST(request: Request) {
   if (await hasCompensationOverlap(input.employeeId, input.effectiveFrom, input.effectiveTo)) return NextResponse.json({ error: { code: "CONFLICT", message: "This compensation period overlaps an existing period." } }, { status: 409 });
   const created = await db.compensationProfile.create({ data: { companyId: user.companyId, employeeId: input.employeeId, createdById: user.id, status: input.status, effectiveFrom: input.effectiveFrom, effectiveTo: input.effectiveTo ?? null, contractStartDate, contractEndDate, departmentId: input.departmentId ?? null, contractType: input.contractType, jobTitle: input.jobTitle ?? null, payrollIdentifier: input.payrollIdentifier ?? null, baseSalary: input.baseSalary, dailyRate: input.dailyRate ?? null, hourlyRate: input.hourlyRate ?? null, components: input.components, taxStatus: input.taxStatus, insuranceStatus: input.insuranceStatus, bankAccountLast4: input.bankAccountLast4 ?? null, notes: input.notes ?? null } });
   await audit({ companyId: user.companyId, actorId: user.id, action: "payroll.compensation.create", entityType: "CompensationProfile", entityId: created.id, after: input });
-  return NextResponse.json({ data: created }, { status: 201 });
+  return NextResponse.json({ data: { ...created, bankAccountLast4: maskBankAccountLast4(created.bankAccountLast4) } }, { status: 201 });
 }
