@@ -60,7 +60,7 @@ Each item must include server-side authorization, validation, UI coverage where 
 - [x] Prevent overlapping or ambiguous compensation periods.
 - [x] Require authorization and an audit reason for every compensation change.
 - [x] Add restricted employee bank/payment details with change history.
-- [ ] Validate that actual compensation satisfies applicable minimum legal requirements.
+- [x] Validate that actual compensation satisfies applicable minimum legal requirements.
 
 ## P0 â€” legal calculation engine
 
