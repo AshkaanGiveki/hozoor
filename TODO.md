@@ -86,8 +86,8 @@ Each item must include server-side authorization, validation, UI coverage where 
 
 - [x] Generate one detailed payslip per employee per payroll period.
 - [x] Show attendance, overtime, leave, allowances, bonuses, gross compensation, every deduction, net payable, and payment date.
-- [ ] Show taxable and insurable bases separately only when legally required, with explanations and rule references.
-- [ ] Show employer-side costs separately, never as employee deductions.
+- [x] Show taxable and insurable bases separately only when legally required, with explanations and rule references.
+- [x] Show employer-side costs separately, never as employee deductions.
 - [x] Provide downloadable PDF and structured payslip data.
 - [x] Allow employees to view only their own payslips and payment history.
 - [x] Add payslip publication, acknowledgement, and correction-notification history.
@@ -102,7 +102,7 @@ Each item must include server-side authorization, validation, UI coverage where 
 ## P1 â€” payroll review, reports, and exports
 
 - [x] Add payroll dashboard with gross, deductions, net payable, employer cost, exceptions, and approval status.
-- [ ] Add employee calculation drill-down and formula explanations.
+- [x] Add employee calculation drill-down and formula explanations.
 - [ ] Add department/cost-center summaries and payroll register.
 - [x] Add tax, insurance, bank-payment, accounting, and payroll exports from the finalized payroll snapshot.
 - [ ] Add schema versioning, export history, checksums, permissions, and duplicate-submission protection.
