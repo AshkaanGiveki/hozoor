@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { db } from "./db";
+import { checksumRules } from "./payroll";
 
 type RuleData = {
   workingDays?: number;
@@ -103,14 +104,15 @@ export async function calculatePayrollPeriod(periodId: string, companyId: string
       { type: "TAX" as const, code: "TAX", label: "Tax", amount: tax.neg(), sourceData: { rate: taxRate, base: taxable.toString() } },
       { type: "EMPLOYER_INSURANCE" as const, code: "EMPLOYER_INSURANCE", label: "Employer insurance", amount: employerInsurance, sourceData: { rate: employerInsuranceRate, base: insurable.toString() } },
     ];
-    calculations.push({ employeeId: employee.id, compensationProfileId: compensation.id, gross, taxable, insurable, employeeInsurance, employerInsurance, tax, net, lines, snapshot: { employeeId: employee.id, compensationProfileId: compensation.id, ruleSetId: period.ruleSetId, ruleSetChecksum: period.ruleSet.checksum, payrollPolicyId: period.payrollPolicyId, payrollPolicySettings: period.payrollPolicy?.settings ?? null, attendanceDayIds: days.map((day) => day.date.toISOString()), attendanceSummary, rules, source: "attendance-and-compensation" } });
+    const snapshot = { employeeId: employee.id, compensationProfileId: compensation.id, ruleSetId: period.ruleSetId, ruleSetChecksum: period.ruleSet.checksum, payrollPolicyId: period.payrollPolicyId, payrollPolicySettings: period.payrollPolicy?.settings ?? null, attendanceDayIds: days.map((day) => day.date.toISOString()), attendanceSummary, rules, source: "attendance-and-compensation" };
+    calculations.push({ employeeId: employee.id, compensationProfileId: compensation.id, gross, taxable, insurable, employeeInsurance, employerInsurance, tax, net, lines, snapshot });
   }
   if (missingCompensation.length) throw new Error(`MISSING_COMPENSATION:${missingCompensation.join(",")}`);
   await db.$transaction(async (tx) => {
     await tx.payrollRun.deleteMany({ where: { periodId } });
     for (const calculation of calculations) {
       const deductionLines = calculation.lines.filter((line) => ["TAX", "EMPLOYEE_INSURANCE", "LOAN_REPAYMENT", "ADVANCE_REPAYMENT", "OTHER_DEDUCTION"].includes(line.type)).reduce((sum, line) => sum.plus(line.amount.abs()), money(0));
-      const run = await tx.payrollRun.create({ data: { periodId, employeeId: calculation.employeeId, compensationProfileId: calculation.compensationProfileId, snapshot: calculation.snapshot, grossAmount: calculation.gross, taxableAmount: calculation.taxable, insurableAmount: calculation.insurable, employeeInsurance: calculation.employeeInsurance, employerInsurance: calculation.employerInsurance, taxAmount: calculation.tax, totalDeductions: deductionLines, netPayable: calculation.net, lines: { create: calculation.lines.map((line) => ({ type: line.type, code: line.code, label: line.label, amount: line.amount, sourceData: line.sourceData })) } } });
+      const run = await tx.payrollRun.create({ data: { periodId, employeeId: calculation.employeeId, compensationProfileId: calculation.compensationProfileId, snapshot: calculation.snapshot, snapshotChecksum: checksumRules(calculation.snapshot), grossAmount: calculation.gross, taxableAmount: calculation.taxable, insurableAmount: calculation.insurable, employeeInsurance: calculation.employeeInsurance, employerInsurance: calculation.employerInsurance, taxAmount: calculation.tax, totalDeductions: deductionLines, netPayable: calculation.net, lines: { create: calculation.lines.map((line) => ({ type: line.type, code: line.code, label: line.label, amount: line.amount, sourceData: line.sourceData })) } } });
       await tx.payrollPayment.upsert({ where: { payrollRunId: run.id }, update: { amount: calculation.net, status: "PENDING", paidAt: null, paymentReference: null, failureReason: null }, create: { companyId, periodId, employeeId: calculation.employeeId, payrollRunId: run.id, amount: calculation.net, status: "PENDING" } });
     }
     await tx.payrollPeriod.update({ where: { id: periodId }, data: { status: "CALCULATED", calculatedAt: new Date() } });
