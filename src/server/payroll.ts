@@ -6,6 +6,10 @@ export function canManagePayroll(role: RoleCode) {
   return role === RoleCode.ADMIN || role === RoleCode.HR_ADMIN;
 }
 
+export function maskBankAccountLast4(value: string | null | undefined) {
+  return value ? `••••${value}` : null;
+}
+
 export const payrollPeriodTransitions: Record<PayrollPeriodStatus, PayrollPeriodStatus[]> = {
   DRAFT: [],
   CALCULATED: [PayrollPeriodStatus.IN_REVIEW, PayrollPeriodStatus.CORRECTED],
