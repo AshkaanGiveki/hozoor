@@ -1,4 +1,4 @@
-import { RoleCode } from "@prisma/client";
+import { Prisma, RoleCode } from "@prisma/client";
 import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/server/auth";
@@ -22,7 +22,8 @@ export async function GET(request: Request) {
   const idempotencyKey = request.headers.get("Idempotency-Key")?.trim() || null;
   const existing = idempotencyKey ? await db.reportExport.findFirst({ where: { companyId: user.companyId, reportType: "payroll", idempotencyKey } }) : null;
   const storageName = existing?.storageName ?? await savePrivateBuffer(buffer, ".csv");
-  const exportRecord = existing ?? await db.reportExport.create({ data: { companyId: user.companyId, createdById: user.id, reportType: "payroll", filename: "ontyme-payroll.csv", storageName, filters: { periodId }, schemaVersion: 1, checksum, idempotencyKey, sourceSnapshot: { periodId, runIds: runs.map((run) => run.id) } } });
+  const netPayableTotal = runs.reduce((sum, run) => sum.plus(run.netPayable), new Prisma.Decimal(0));
+  const exportRecord = existing ?? await db.reportExport.create({ data: { companyId: user.companyId, createdById: user.id, reportType: "payroll", filename: "ontyme-payroll.csv", storageName, filters: { periodId }, schemaVersion: 1, checksum, idempotencyKey, sourceSnapshot: { periodId, runIds: runs.map((run) => run.id), netPayableTotal: String(netPayableTotal) } } });
   await audit({ companyId: user.companyId, actorId: user.id, action: existing ? "payroll.export.reuse" : "payroll.export.create", entityType: "ReportExport", entityId: exportRecord.id, after: { checksum: exportRecord.checksum, schemaVersion: exportRecord.schemaVersion, idempotencyKey } });
   const output = existing ? await readPrivateFile(existing.storageName) : buffer;
   return new NextResponse(output, { headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="${exportRecord.filename}"`, "X-Export-Id": exportRecord.id, "X-Export-Schema-Version": String(exportRecord.schemaVersion), "X-Export-Checksum": exportRecord.checksum } });

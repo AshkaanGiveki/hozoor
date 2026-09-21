@@ -18,3 +18,10 @@ export function summarizePayrollRegister(rows: PayrollRegisterRow[]) {
   }
   return [...groups.values()].map((group) => ({ ...group, gross: group.gross.toString(), deductions: group.deductions.toString(), net: group.net.toString(), employerInsurance: group.employerInsurance.toString(), paid: group.paid.toString() }));
 }
+
+export function reconcilePayrollTotals(rows: PayrollRegisterRow[], exportedNet?: Prisma.Decimal | null) {
+  const calculatedNet = rows.reduce((sum, row) => sum.plus(row.net), new Prisma.Decimal(0));
+  const paidNet = rows.filter((row) => row.paymentStatus === "PAID").reduce((sum, row) => sum.plus(row.paid), new Prisma.Decimal(0));
+  const unmatched = rows.filter((row) => row.paymentStatus !== "PAID" || !row.paid.eq(row.net)).length;
+  return { calculatedNet: calculatedNet.toString(), exportedNet: exportedNet?.toString() ?? null, paidNet: paidNet.toString(), unmatched, exportMatchesCalculated: exportedNet ? exportedNet.eq(calculatedNet) : null };
+}

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { canApprovePayrollPeriod, canConfirmPayrollPayment, checksumRules, payrollPeriodTransitions, simulatePayrollPolicy, validateLegalRules, validatePayrollPolicy, validateRuleSetApproval } from "@/server/payroll";
 import { isEarningComponent } from "@/server/payroll-engine";
-import { summarizePayrollRegister } from "@/server/payroll-reporting";
+import { reconcilePayrollTotals, summarizePayrollRegister } from "@/server/payroll-reporting";
 import { Prisma } from "@prisma/client";
 
 describe("payroll rule safety", () => {
@@ -46,6 +46,11 @@ describe("payroll rule safety", () => {
       { employeeId: "2", employeeCode: "E2", employeeName: "Two", departmentId: "d1", departmentName: "Engineering", gross: new Prisma.Decimal(200), deductions: new Prisma.Decimal(20), net: new Prisma.Decimal(180), employerInsurance: new Prisma.Decimal(40), paid: new Prisma.Decimal(0), paymentStatus: "PENDING" },
     ]);
     expect(summary).toEqual([{ departmentId: "d1", departmentName: "Engineering", employeeCount: 2, gross: "300", deductions: "30", net: "270", employerInsurance: "60", paid: "90", unmatched: 1 }]);
+  });
+
+  it("reconciles calculated, exported, and paid net totals", () => {
+    const rows = [{ employeeId: "1", employeeCode: "E1", employeeName: "One", departmentId: null, departmentName: null, gross: new Prisma.Decimal(100), deductions: new Prisma.Decimal(10), net: new Prisma.Decimal(90), employerInsurance: new Prisma.Decimal(20), paid: new Prisma.Decimal(90), paymentStatus: "PAID" }];
+    expect(reconcilePayrollTotals(rows, new Prisma.Decimal(90))).toEqual({ calculatedNet: "90", exportedNet: "90", paidNet: "90", unmatched: 0, exportMatchesCalculated: true });
   });
 
   it("rejects legal overrides and simulates policy-only choices", () => {
