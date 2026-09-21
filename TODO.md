@@ -56,7 +56,7 @@ Each item must include server-side authorization, validation, UI coverage where 
 
 - [x] Add compensation profiles with effective dates and full change history.
 - [x] Support base salary, daily/hourly rate, allowances, bonuses, commissions, overtime rate, benefits, loans, advances, and deductions.
-- [ ] Store contract type, dates, department, position, insurance status, tax status, and payroll identifier.
+- [x] Store contract type, dates, department, position, insurance status, tax status, and payroll identifier.
 - [x] Prevent overlapping or ambiguous compensation periods.
 - [x] Require authorization and an audit reason for every compensation change.
 - [x] Add restricted employee bank/payment details with change history.
