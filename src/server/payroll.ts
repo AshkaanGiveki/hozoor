@@ -21,6 +21,10 @@ export function canApprovePayrollPeriod(status: PayrollPeriodStatus, creatorId: 
   return status === PayrollPeriodStatus.IN_REVIEW && creatorId !== approverId;
 }
 
+export function canConfirmPayrollPayment(userId: string, creatorId: string, approverId: string | null) {
+  return Boolean(approverId) && userId !== creatorId && userId !== approverId;
+}
+
 export function checksumRules(rules: unknown) {
   return crypto.createHash("sha256").update(JSON.stringify(rules)).digest("hex");
 }

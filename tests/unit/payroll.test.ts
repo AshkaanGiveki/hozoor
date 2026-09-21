@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canApprovePayrollPeriod, checksumRules, payrollPeriodTransitions, simulatePayrollPolicy, validateLegalRules, validatePayrollPolicy, validateRuleSetApproval } from "@/server/payroll";
+import { canApprovePayrollPeriod, canConfirmPayrollPayment, checksumRules, payrollPeriodTransitions, simulatePayrollPolicy, validateLegalRules, validatePayrollPolicy, validateRuleSetApproval } from "@/server/payroll";
 import { isEarningComponent } from "@/server/payroll-engine";
 import { summarizePayrollRegister } from "@/server/payroll-reporting";
 import { Prisma } from "@prisma/client";
@@ -13,6 +13,13 @@ describe("payroll rule safety", () => {
     expect(payrollPeriodTransitions.CALCULATED).not.toContain("APPROVED");
     expect(payrollPeriodTransitions.LOCKED).toContain("REVERSED");
     expect(payrollPeriodTransitions.LOCKED).not.toContain("CORRECTED");
+  });
+
+  it("separates payment confirmation from creation and approval", () => {
+    expect(canConfirmPayrollPayment("payment-user", "creator", "approver")).toBe(true);
+    expect(canConfirmPayrollPayment("creator", "creator", "approver")).toBe(false);
+    expect(canConfirmPayrollPayment("approver", "creator", "approver")).toBe(false);
+    expect(canConfirmPayrollPayment("payment-user", "creator", null)).toBe(false);
   });
 
   it("rejects incomplete legal rules", () => {

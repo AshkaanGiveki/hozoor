@@ -222,6 +222,7 @@ model User {
   savedFilters SavedReportFilter[]
   createdPayrollPeriods PayrollPeriod[] @relation("PayrollPeriodCreator")
   approvedPayrollPeriods PayrollPeriod[] @relation("PayrollPeriodApprover")
+  confirmedPayrollPayments PayrollPayment[] @relation("PayrollPaymentConfirmer")
   @@unique([companyId,username])
   @@index([companyId,role])
 }
@@ -1018,12 +1019,15 @@ model PayrollPayment {
   paymentReference String?
   paidAt DateTime?
   failureReason String?
+  confirmedById String?
+  confirmedAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   company CompanyProfile @relation(fields: [companyId], references: [id], onDelete: Cascade)
   period PayrollPeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
   employee Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict)
   payrollRun PayrollRun @relation(fields: [payrollRunId], references: [id], onDelete: Restrict)
+  confirmedBy User? @relation("PayrollPaymentConfirmer", fields: [confirmedById], references: [id], onDelete: SetNull)
   @@index([companyId, periodId, status])
 }
 
