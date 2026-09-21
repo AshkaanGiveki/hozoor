@@ -501,6 +501,11 @@ model Holiday {
   companyId String
   date      DateTime
   title     String
+  calendarYear Int?
+  version   Int            @default(1)
+  sourceReference String?
+  isOfficial Boolean       @default(false)
+  active    Boolean        @default(true)
   company   CompanyProfile @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@unique([companyId, date])

@@ -26,7 +26,7 @@ export async function recalculateAttendanceDay(companyId: string, employeeId: st
   const rule = scheduledShift ? { ...policyRule, startMinutes: scheduledShift.startMinutes, endMinutes: scheduledShift.endMinutes } : policyRule;
   const [raw, holiday, leaves, offTimes, corrections] = await Promise.all([
     db.rawAttendanceEvent.findMany({ where: { companyId, employeeId, timestamp: { gte: day, lt: next } }, orderBy: { timestamp: "asc" } }),
-    db.holiday.findFirst({ where: { companyId, date: day } }),
+    db.holiday.findFirst({ where: { companyId, date: day, active: true } }),
     db.leaveRequest.findMany({ where: { companyId, employeeId, status: "APPROVED", startDate: { lte: day }, endDate: { gte: day } } }),
     db.offTimeRequest.findMany({ where: { companyId, employeeId, status: "APPROVED", date: day } }),
     db.attendanceCorrectionRequest.findMany({ where: { companyId, employeeId, status: "APPROVED", date: day } }),
