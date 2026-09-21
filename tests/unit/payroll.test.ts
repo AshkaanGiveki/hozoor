@@ -3,8 +3,13 @@ import { canApprovePayrollPeriod, canConfirmPayrollPayment, checksumRules, payro
 import { isEarningComponent } from "@/server/payroll-engine";
 import { reconcilePayrollTotals, summarizePayrollRegister } from "@/server/payroll-reporting";
 import { Prisma } from "@prisma/client";
+import { buildAuditHash } from "@/server/audit";
 
 describe("payroll rule safety", () => {
+  it("changes the audit hash when chained audit content changes", () => {
+    const base = { companyId: "c", action: "payroll.view", entityType: "PayrollRun", entityId: "r", previousHash: null, createdAt: new Date("2026-01-01T00:00:00.000Z") };
+    expect(buildAuditHash({ ...base, after: { net: "100" } })).not.toBe(buildAuditHash({ ...base, after: { net: "101" } }));
+  });
   it("requires a separate reviewer and an explicit review state", () => {
     expect(canApprovePayrollPeriod("IN_REVIEW", "creator", "reviewer")).toBe(true);
     expect(canApprovePayrollPeriod("IN_REVIEW", "creator", "creator")).toBe(false);
