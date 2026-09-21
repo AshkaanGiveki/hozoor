@@ -8,6 +8,7 @@ import { buildAuditHash, verifyAuditChain } from "@/server/audit";
 import { createPayrollIntegrationPayload, createPayrollWebhookAdapter } from "@/server/payroll-integration";
 import { resolveIntegrationSubmissionOutcome } from "@/server/payroll-integration";
 import { canReadAll } from "@/server/permissions";
+import annual1405Fixture from "../fixtures/iranian-payroll-1405.json";
 
 describe("payroll rule safety", () => {
   it("changes the audit hash when chained audit content changes", () => {
@@ -153,6 +154,43 @@ describe("payroll rule safety", () => {
     expect(capInsurableBase(new Prisma.Decimal(99), 100)).toEqual(new Prisma.Decimal(99));
     expect(applyPartTimeRatio(new Prisma.Decimal(1000), 0.5)).toEqual(new Prisma.Decimal(500));
     expect(applyPartTimeRatio(new Prisma.Decimal(1000))).toEqual(new Prisma.Decimal(1000));
+  });
+
+  it("locks the 1405 regression fixture to the draft legal rules", () => {
+    expect(iranianPrivateSector1405Rules).toMatchObject(annual1405Fixture);
+    expect(iranianPrivateSector1405Rules.taxBrackets).toEqual(annual1405Fixture.taxBrackets);
+    expect(iranianPrivateSector1405Rules.specialTaxRates).toEqual(annual1405Fixture.specialTaxRates);
+  });
+
+  it("covers Iranian tax threshold edges using annualized monthly bases", () => {
+    expect(calculateProgressiveTax(new Prisma.Decimal(400_000_000), iranianPrivateSector1405Rules)).toEqual(new Prisma.Decimal(0));
+    expect(calculateProgressiveTax(new Prisma.Decimal(800_000_000), iranianPrivateSector1405Rules)).toEqual(new Prisma.Decimal(40_000_000));
+    expect(calculateProgressiveTax(new Prisma.Decimal(1_000_000_000), iranianPrivateSector1405Rules)).toEqual(new Prisma.Decimal(70_000_000));
+    expect(calculateProgressiveTax(new Prisma.Decimal(1_200_000_000), iranianPrivateSector1405Rules)).toEqual(new Prisma.Decimal(110_000_000));
+    expect(calculateProgressiveTax(new Prisma.Decimal(1_400_000_000), iranianPrivateSector1405Rules)).toEqual(new Prisma.Decimal(160_000_000));
+    expect(calculateProgressiveTax(new Prisma.Decimal(1_600_000_000), iranianPrivateSector1405Rules)).toEqual(new Prisma.Decimal(220_000_000));
+  });
+
+  it("covers insurance ceilings for every Gregorian month length", () => {
+    expect(calculateInsuranceCeiling(iranianPrivateSector1405Rules, 28)).toEqual(new Prisma.Decimal("1086202600"));
+    expect(calculateInsuranceCeiling(iranianPrivateSector1405Rules, 29)).toEqual(new Prisma.Decimal("1124995550"));
+    expect(calculateInsuranceCeiling(iranianPrivateSector1405Rules, 30)).toEqual(new Prisma.Decimal("1163788500"));
+    expect(calculateInsuranceCeiling(iranianPrivateSector1405Rules, 31)).toEqual(new Prisma.Decimal("1202581450"));
+    expect(calculateInsuranceCeiling(iranianPrivateSector1405Rules, 0)).toEqual(new Prisma.Decimal(0));
+  });
+
+  it("covers leap-year and partial-year benefit proration", () => {
+    expect(calculateIranianEidi(iranianPrivateSector1405Rules.minimumDailyWage, 366)).toEqual({ minimum: 333421989.0410959, maximum: 500132983.5616439 });
+    expect(calculateIranianEidi(iranianPrivateSector1405Rules.minimumDailyWage, 182.5)).toEqual({ minimum: 166255500, maximum: 249383250 });
+    expect(calculateIranianSeverance(iranianPrivateSector1405Rules.minimumMonthlySalary, 182.5)).toBe(83127750);
+    expect(calculateIranianSeverance(iranianPrivateSector1405Rules.minimumMonthlySalary, 0)).toBe(0);
+  });
+
+  it("applies part-time minimums proportionally and rejects only below-ratio pay", () => {
+    const halfTimeMinimum = iranianPrivateSector1405Rules.minimumMonthlySalary * 0.5;
+    expect(applyPartTimeRatio(new Prisma.Decimal(iranianPrivateSector1405Rules.minimumMonthlySalary), 0.5).toNumber()).toBe(halfTimeMinimum);
+    expect(validateCompensationMinimum(halfTimeMinimum, { minimumMonthlySalary: halfTimeMinimum })).toBeNull();
+    expect(validateCompensationMinimum(halfTimeMinimum - 1, { minimumMonthlySalary: halfTimeMinimum })).toContain("minimum monthly salary");
   });
 
   it("masks sensitive bank account suffixes at the response boundary", () => {
