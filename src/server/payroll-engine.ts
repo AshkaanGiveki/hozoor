@@ -24,12 +24,13 @@ export function isEarningComponent(component: Component) {
 }
 
 const money = (value: Prisma.Decimal | number | string) => new Prisma.Decimal(value);
-function rounded(value: Prisma.Decimal, policy: PolicyData = {}) {
-  if (policy.rounding === "floor") return value.toDecimalPlaces(0, Prisma.Decimal.ROUND_DOWN);
-  if (policy.rounding === "ceil") return value.toDecimalPlaces(0, Prisma.Decimal.ROUND_UP);
+export function roundPayrollAmount(value: Prisma.Decimal, rounding: PolicyData["rounding"] = "nearest-rial") {
+  if (rounding === "floor") return value.toDecimalPlaces(0, Prisma.Decimal.ROUND_DOWN);
+  if (rounding === "ceil") return value.toDecimalPlaces(0, Prisma.Decimal.ROUND_UP);
   return value.toDecimalPlaces(0, Prisma.Decimal.ROUND_HALF_UP);
 }
-function calculateTax(base: Prisma.Decimal, rules: RuleData) {
+function rounded(value: Prisma.Decimal, policy: PolicyData = {}) { return roundPayrollAmount(value, policy.rounding); }
+export function calculateProgressiveTax(base: Prisma.Decimal, rules: RuleData) {
   const taxable = base.minus(rules.taxExemption ?? 0).greaterThan(0) ? base.minus(rules.taxExemption ?? 0) : money(0);
   if (!rules.taxBrackets?.length) return taxable.mul(rules.taxRate ?? 0);
   let lower = money(0); let result = money(0);
@@ -42,6 +43,8 @@ function calculateTax(base: Prisma.Decimal, rules: RuleData) {
   }
   return result;
 }
+export function calculateOvertimePay(hourlyRate: Prisma.Decimal, minutes: number, multiplier: number) { return hourlyRate.mul(minutes).div(60).mul(multiplier); }
+export function capInsurableBase(base: Prisma.Decimal, ceiling?: number) { return ceiling === undefined ? base : Prisma.Decimal.min(base, money(ceiling)); }
 
 export async function calculatePayrollPeriod(periodId: string, companyId: string) {
   const period = await db.payrollPeriod.findFirst({ where: { id: periodId, companyId }, include: { ruleSet: true, payrollPolicy: true } });
@@ -78,7 +81,7 @@ export async function calculatePayrollPeriod(periodId: string, companyId: string
     const componentEarnings = earnings.reduce((sum, item) => sum.plus(money(item.amount)), money(0));
     const componentDeductions = deductions.reduce((sum, item) => sum.plus(money(item.amount)), money(0));
     const hourly = compensation.hourlyRate ? money(compensation.hourlyRate) : money(compensation.dailyRate ?? base.div(workingDays)).div(workingHours);
-    const overtime = hourly.mul(overtimeMinutes).div(60).mul(overtimeMultiplier);
+    const overtime = calculateOvertimePay(hourly, overtimeMinutes, overtimeMultiplier);
     const adjustmentEarnings = adjustments.filter((item) => item.amount.gt(0)).reduce((sum, item) => sum.plus(item.amount), money(0));
     const adjustmentDeductions = adjustments.filter((item) => item.amount.lt(0)).reduce((sum, item) => sum.plus(item.amount.abs()), money(0));
     const gross = rounded(base.plus(componentEarnings).plus(overtime).plus(adjustmentEarnings), policy);
@@ -86,10 +89,10 @@ export async function calculatePayrollPeriod(periodId: string, companyId: string
     const insurableAdjustments = adjustments.filter((item) => item.insurable).reduce((sum, item) => sum.plus(item.amount), money(0));
     const taxable = rounded(base.plus(earnings.filter((item) => item.taxable !== false).reduce((sum, item) => sum.plus(money(item.amount)), money(0))).plus(overtime).plus(taxableAdjustments), policy);
     const calculatedInsurable = rounded(base.plus(earnings.filter((item) => item.insurable !== false).reduce((sum, item) => sum.plus(money(item.amount)), money(0))).plus(overtime).plus(insurableAdjustments), policy);
-    const insurable = rules.insuranceCeiling === undefined ? calculatedInsurable : Prisma.Decimal.min(calculatedInsurable, money(rules.insuranceCeiling));
+    const insurable = capInsurableBase(calculatedInsurable, rules.insuranceCeiling);
     const employeeInsurance = rounded(insurable.mul(employeeInsuranceRate), policy);
     const employerInsurance = rounded(insurable.mul(employerInsuranceRate), policy);
-    const tax = rounded(calculateTax(taxable, rules), policy);
+    const tax = rounded(calculateProgressiveTax(taxable, rules), policy);
     const net = rounded(gross.minus(employeeInsurance).minus(tax).minus(componentDeductions).minus(adjustmentDeductions), policy);
     const lines = [
       { type: "BASE_SALARY" as const, code: "BASE", label: "Base salary", amount: rounded(base, policy), sourceData: { compensationProfileId: compensation.id, workedDays } },
