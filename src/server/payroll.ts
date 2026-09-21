@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { CompensationStatus, PayrollPeriodStatus, PayrollRuleStatus, RoleCode } from "@prisma/client";
 import { db } from "./db";
+import { validateIranianLabourBaseline } from "./iranian-payroll-law";
 
 export function canManagePayroll(role: RoleCode) {
   return role === RoleCode.ADMIN || role === RoleCode.HR_ADMIN;
@@ -52,6 +53,8 @@ export function validateLegalRules(rules: unknown) {
   if ((record.workingDays as number) <= 0 || (record.workingHoursPerDay as number) <= 0) return "Working days and working hours must be positive.";
   if (record.minimumMonthlySalary !== undefined && (typeof record.minimumMonthlySalary !== "number" || record.minimumMonthlySalary < 0)) return "minimumMonthlySalary must be non-negative.";
   if (["overtimeMultiplier", "employeeInsuranceRate", "employerInsuranceRate", "taxRate"].some((key) => (record[key] as number) < 0)) return "Legal rates cannot be negative.";
+  const iranianBaselineError = validateIranianLabourBaseline(record);
+  if (iranianBaselineError) return iranianBaselineError;
   return null;
 }
 
