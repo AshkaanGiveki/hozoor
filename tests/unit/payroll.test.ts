@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { canApprovePayrollPeriod, canConfirmPayrollPayment, canManagePayroll, checksumRules, maskBankAccountLast4, payrollPeriodTransitions, simulatePayrollPolicy, validateCompensationMinimum, validateLegalRules, validatePayrollPolicy, validateRuleSetApproval } from "@/server/payroll";
+import { canApprovePayrollPeriod, canConfirmPayrollPayment, canManagePayroll, checksumRules, maskBankAccountLast4, payrollPeriodTransitions, productionPayrollGate, simulatePayrollPolicy, validateCompensationMinimum, validateLegalRules, validatePayrollPolicy, validateRuleSetApproval } from "@/server/payroll";
 import { calculateOvertimePay, calculateProgressiveTax, capInsurableBase, isEarningComponent, roundPayrollAmount } from "@/server/payroll-engine";
 import { reconcilePayrollTotals, summarizePayrollRegister } from "@/server/payroll-reporting";
 import { Prisma, RoleCode } from "@prisma/client";
@@ -82,6 +82,13 @@ describe("payroll rule safety", () => {
     expect(canReadAll({ role: RoleCode.AUDITOR })).toBe(true);
     expect(canReadAll({ role: RoleCode.MANAGER })).toBe(false);
     expect(canReadAll({ role: RoleCode.EMPLOYEE })).toBe(false);
+  });
+
+  it("keeps production payroll disabled without explicit legal activation evidence", () => {
+    expect(productionPayrollGate({ nodeEnv: "production", enabled: "false", approvalReference: "approved" })).toContain("disabled");
+    expect(productionPayrollGate({ nodeEnv: "production", enabled: "true", approvalReference: "" })).toContain("PAYROLL_LEGAL_APPROVAL_REFERENCE");
+    expect(productionPayrollGate({ nodeEnv: "production", enabled: "true", approvalReference: "legal-review-2026" })).toBeNull();
+    expect(productionPayrollGate({ nodeEnv: "test", enabled: "false" })).toBeNull();
   });
 
   it("rejects incomplete legal rules", () => {

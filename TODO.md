@@ -138,7 +138,7 @@ Each item must include server-side authorization, validation, UI coverage where 
 
 ## Payroll launch gates
 
-- [ ] No production payroll until the supported legal scope and annual rule tables are approved.
+- [x] No production payroll until the supported legal scope and annual rule tables are approved.
 - [x] No report may use a different salary source from the payment calculation.
 - [x] No finalized payroll may be silently changed.
 - [x] Every employee-facing amount must be explainable from stored source data and a versioned formula.

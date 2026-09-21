@@ -15,7 +15,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     return NextResponse.json({ data: result });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Payroll calculation failed.";
-    const status = message === "PAYROLL_PERIOD_NOT_FOUND" ? 404 : message.startsWith("MISSING_COMPENSATION:") || message.startsWith("COMPENSATION_BELOW_MINIMUM:") || message.startsWith("RULES_") ? 422 : 409;
-    return NextResponse.json({ error: { code: "PAYROLL_CALCULATION_FAILED", message } }, { status });
+    const status = message.startsWith("PAYROLL_PRODUCTION_DISABLED:") ? 503 : message === "PAYROLL_PERIOD_NOT_FOUND" ? 404 : message.startsWith("MISSING_COMPENSATION:") || message.startsWith("COMPENSATION_BELOW_MINIMUM:") || message.startsWith("RULES_") ? 422 : 409;
+    return NextResponse.json({ error: { code: message.startsWith("PAYROLL_PRODUCTION_DISABLED:") ? "PAYROLL_PRODUCTION_GATE" : "PAYROLL_CALCULATION_FAILED", message: message.replace(/^PAYROLL_PRODUCTION_DISABLED:/, "") } }, { status });
   }
 }

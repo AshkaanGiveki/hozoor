@@ -25,3 +25,5 @@ OnTyme’s payroll engine is designed for transparent Iranian payroll records, b
 4. Have an authorized payroll/accounting reviewer validate the values and approve the rule set. The API rejects approval without a source reference or complete required values.
 5. Create a new rule version for every annual change, calculate only periods that reference that version, and retain the old version for historical reproducibility.
 6. Obtain independent legal/accounting review before enabling production payroll for a new jurisdictional scope.
+
+Production calculation and payment are also protected by a deployment gate. Production requires both `PAYROLL_PRODUCTION_ENABLED=true` and a non-empty `PAYROLL_LEGAL_APPROVAL_REFERENCE`. The reference should identify the independent legal/accounting approval or release record; without both values, calculation and payment APIs return a production-gate error.
