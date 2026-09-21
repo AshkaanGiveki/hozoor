@@ -1,6 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { db } from "./db";
-import { checksumRules } from "./payroll";
+import { checksumRules, productionPayrollGate } from "./payroll";
 
 type RuleData = {
   workingDays?: number;
@@ -48,6 +48,8 @@ export function calculateOvertimePay(hourlyRate: Prisma.Decimal, minutes: number
 export function capInsurableBase(base: Prisma.Decimal, ceiling?: number) { return ceiling === undefined ? base : Prisma.Decimal.min(base, money(ceiling)); }
 
 export async function calculatePayrollPeriod(periodId: string, companyId: string) {
+  const productionGateError = productionPayrollGate();
+  if (productionGateError) throw new Error(`PAYROLL_PRODUCTION_DISABLED:${productionGateError}`);
   const period = await db.payrollPeriod.findFirst({ where: { id: periodId, companyId }, include: { ruleSet: true, payrollPolicy: true } });
   if (!period) throw new Error("PAYROLL_PERIOD_NOT_FOUND");
   if (!["DRAFT", "CALCULATED", "CORRECTED"].includes(period.status)) throw new Error("PAYROLL_PERIOD_NOT_CALCULABLE");

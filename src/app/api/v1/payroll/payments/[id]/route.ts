@@ -4,13 +4,15 @@ import { z } from "zod";
 import { audit } from "@/server/audit";
 import { getCurrentUser } from "@/server/auth";
 import { db } from "@/server/db";
-import { canConfirmPayrollPayment, canManagePayroll } from "@/server/payroll";
+import { canConfirmPayrollPayment, canManagePayroll, productionPayrollGate } from "@/server/payroll";
 
 const schema = z.object({ status: z.enum([PayrollPaymentStatus.SUBMITTED, PayrollPaymentStatus.PAID, PayrollPaymentStatus.FAILED, PayrollPaymentStatus.REVERSED]), amount: z.string().regex(/^\\d+$/).optional(), paymentReference: z.string().trim().max(200).nullable().optional(), failureReason: z.string().trim().max(1000).nullable().optional() });
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser();
   if (!user || !canManagePayroll(user.role)) return NextResponse.json({ error: { code: "FORBIDDEN", message: "Payroll administration access required." } }, { status: 403 });
+  const productionGateError = productionPayrollGate();
+  if (productionGateError) return NextResponse.json({ error: { code: "PAYROLL_PRODUCTION_GATE", message: productionGateError } }, { status: 503 });
   const { id } = await context.params;
   const parsed = schema.safeParse(await request.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: { code: "VALIDATION_ERROR", message: "Invalid payment update." } }, { status: 400 });

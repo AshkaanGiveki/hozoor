@@ -6,6 +6,14 @@ export function canManagePayroll(role: RoleCode) {
   return role === RoleCode.ADMIN || role === RoleCode.HR_ADMIN;
 }
 
+export function productionPayrollGate(config: { nodeEnv?: string; enabled?: string; approvalReference?: string } = {}) {
+  const nodeEnv = config.nodeEnv ?? process.env.NODE_ENV;
+  if (nodeEnv !== "production") return null;
+  if ((config.enabled ?? process.env.PAYROLL_PRODUCTION_ENABLED) !== "true") return "Production payroll is disabled until PAYROLL_PRODUCTION_ENABLED=true is explicitly configured.";
+  if (!(config.approvalReference ?? process.env.PAYROLL_LEGAL_APPROVAL_REFERENCE)?.trim()) return "Production payroll requires PAYROLL_LEGAL_APPROVAL_REFERENCE after independent legal/accounting approval.";
+  return null;
+}
+
 export function maskBankAccountLast4(value: string | null | undefined) {
   return value ? `••••${value}` : null;
 }
