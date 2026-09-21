@@ -2,6 +2,8 @@
 
 OnTyme’s payroll engine is designed for transparent Iranian payroll records, but it must not be treated as a legal authority. A company must load and approve the applicable annual rules from official sources before production calculation.
 
+Primary legal sources supplied for this implementation are the [Iranian Labour Law](https://rc.majlis.ir/fa/law/show/99612) and the [Iranian Direct Taxation Act](https://rc.majlis.ir/fa/law/show/91488). These sources establish the legal baseline; annual wage, budget, tax, insurance, and administrative notices remain separately versioned inputs.
+
 ## Current supported scope
 
 - One company, one employee compensation profile effective for the payroll period, one calculated payroll run, one payslip, and one payment record.
@@ -9,10 +11,12 @@ OnTyme’s payroll engine is designed for transparent Iranian payroll records, b
 - Configurable annual rule inputs for working time, overtime multiplier, tax rate or brackets, employee/employer insurance rates, insurance ceiling, exemptions, and minimum monthly salary.
 - Attendance-derived worked time, approved overtime, leave, absence, lateness, early departure, allowances, bonuses, commissions, benefits, loan/advance repayments, deductions, and payment reconciliation when the source data and rules are present.
 - Versioned rule sets with checksums, source references, snapshots, formula/source data, review approval, correction revisions, and reversal reasons.
+- Baseline Labour Law constraints are validated for ordinary covered employment: article 51 working-time limits, article 53 night window, article 58 night premium, article 59 overtime premium, article 39 proportional part-time pay basis, and article 62 paid weekly rest. Annual values remain rule-set data.
 
 ## Explicitly unsupported until implemented and legally reviewed
 
 - Any annual Labour, Tax Administration, or Social Security rates that have not been entered from a verified official publication.
+- Annual salary-tax exemption amounts under Direct Taxation Act article 84 and annual wage/tax changes under the budget or subsequent official notices.
 - Automatic official Persian-calendar holiday rules, night-work rules, Friday/holiday premiums, annual benefits, seniority benefits, severance/final settlement, and official tax/insurance submission formats.
 - Legal interpretation for special employment categories, exemptions, disputed attendance, commissions, or benefits without an approved rule definition.
 - Automatic submission to government, bank, accounting, HR, or payroll systems without verified provider documentation and credentials.

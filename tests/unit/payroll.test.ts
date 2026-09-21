@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { canApprovePayrollPeriod, canConfirmPayrollPayment, canManagePayroll, checksumRules, maskBankAccountLast4, payrollPeriodTransitions, productionPayrollGate, simulatePayrollPolicy, validateCompensationMinimum, validateLegalRules, validatePayrollPolicy, validateRuleSetApproval } from "@/server/payroll";
-import { calculateOvertimePay, calculateProgressiveTax, capInsurableBase, isEarningComponent, roundPayrollAmount } from "@/server/payroll-engine";
+import { applyPartTimeRatio, calculateOvertimePay, calculateProgressiveTax, capInsurableBase, isEarningComponent, roundPayrollAmount } from "@/server/payroll-engine";
 import { reconcilePayrollTotals, summarizePayrollRegister } from "@/server/payroll-reporting";
 import { Prisma, RoleCode } from "@prisma/client";
 import { buildAuditHash, verifyAuditChain } from "@/server/audit";
@@ -99,6 +99,13 @@ describe("payroll rule safety", () => {
     expect(validateLegalRules({ workingDays: 30, workingHoursPerDay: 7.3333, overtimeMultiplier: 1.4, employeeInsuranceRate: 0.07, employerInsuranceRate: 0.23, taxRate: 0.1 })).toBeNull();
   });
 
+  it("enforces stable Iranian labour-law baseline constraints without inventing annual rates", () => {
+    expect(validateLegalRules({ workingDays: 30, workingHoursPerDay: 8.01, overtimeMultiplier: 1.4, employeeInsuranceRate: 0, employerInsuranceRate: 0, taxRate: 0 })).toContain("article 51");
+    expect(validateLegalRules({ workingDays: 30, workingHoursPerDay: 8, weeklyWorkingHours: 45, overtimeMultiplier: 1.4, employeeInsuranceRate: 0, employerInsuranceRate: 0, taxRate: 0 })).toContain("weeklyWorkingHours");
+    expect(validateLegalRules({ workingDays: 30, workingHoursPerDay: 8, overtimeMultiplier: 1.39, employeeInsuranceRate: 0, employerInsuranceRate: 0, taxRate: 0 })).toContain("article 59");
+    expect(validateLegalRules({ workingDays: 30, workingHoursPerDay: 8, overtimeMultiplier: 1.4, nightWorkMultiplier: 1.34, employeeInsuranceRate: 0, employerInsuranceRate: 0, taxRate: 0 })).toContain("article 58");
+  });
+
   it("creates a stable rule checksum", () => {
     expect(checksumRules({ taxRate: 0.1 })).toBe(checksumRules({ taxRate: 0.1 }));
   });
@@ -138,6 +145,8 @@ describe("payroll rule safety", () => {
     expect(calculateProgressiveTax(new Prisma.Decimal(50), { taxExemption: 50, taxBrackets: [{ upTo: 100, rate: 0.1 }] })).toEqual(new Prisma.Decimal(0));
     expect(calculateOvertimePay(new Prisma.Decimal(120), 0, 1.4)).toEqual(new Prisma.Decimal(0));
     expect(capInsurableBase(new Prisma.Decimal(99), 100)).toEqual(new Prisma.Decimal(99));
+    expect(applyPartTimeRatio(new Prisma.Decimal(1000), 0.5)).toEqual(new Prisma.Decimal(500));
+    expect(applyPartTimeRatio(new Prisma.Decimal(1000))).toEqual(new Prisma.Decimal(1000));
   });
 
   it("masks sensitive bank account suffixes at the response boundary", () => {

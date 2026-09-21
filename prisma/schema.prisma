@@ -994,6 +994,7 @@ model CompensationProfile {
   jobTitle          String?
   payrollIdentifier String?
   baseSalary        Decimal            @db.Decimal(20, 0)
+  partTimeRatio     Decimal?           @db.Decimal(8, 6)
   dailyRate         Decimal?           @db.Decimal(20, 0)
   hourlyRate        Decimal?           @db.Decimal(20, 0)
   components        Json
