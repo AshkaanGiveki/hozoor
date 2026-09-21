@@ -13,6 +13,7 @@ This backlog tracks the product capabilities being implemented in priority order
 ## P1 — operational control and reporting
 
 - [x] Complete attendance-device management and employee mappings
+- [x] Auto-detect common ZKTeco/FaraTechno, Virdi, Suprema, and daily-summary file exports
 - [x] Expand reports and add payroll-ready CSV/XLSX exports
 - [x] Add audit-log administration and search
 - [x] Complete attachment support for requests

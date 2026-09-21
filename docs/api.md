@@ -93,3 +93,4 @@ Notification debugging:
  - `GET /payroll/reports` — finalized payroll CSV with gross, deductions, net payable, payment status, and payment reference.
 
 Payroll calculation refuses to run when required legal-rule values are missing. A finalized payroll is not silently recalculated, and every result is linked to the compensation profile, rule-set checksum, attendance inputs, and audit history that produced it.
+File imports support automatic detection for canonical events, ZKTeco/FaraTechno raw exports, Suprema BioStar T&A exports, and daily first-in/last-out summaries. See [attendance import formats](attendance-import-formats.md).
