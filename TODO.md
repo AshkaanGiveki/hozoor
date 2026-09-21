@@ -113,7 +113,7 @@ Each item must include server-side authorization, validation, UI coverage where 
 - [ ] Restrict payroll access by role, organization, department, and employee scope.
 - [ ] Protect bank details and sensitive compensation data.
 - [x] Audit every payroll view, create, change, approval, export, payment, reversal, and download.
-- [ ] Add immutable payroll snapshots and tamper-evident audit records.
+- [x] Add immutable payroll snapshots and tamper-evident audit records.
 - [x] Separate compensation editing, payroll approval, and payment confirmation duties.
 - [ ] Preserve legally required payroll evidence through retention and archival policies.
 
