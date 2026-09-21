@@ -95,9 +95,9 @@ Each item must include server-side authorization, validation, UI coverage where 
 ## P1 â€” company compensation policy
 
 - [ ] Add configurable policies for rounding, grace periods, overtime approval, bonuses, commissions, loans, advances, and payment dates.
-- [ ] Ensure company policies cannot override mandatory legal requirements.
-- [ ] Add policy effective dates, version history, assignments, precedence, and simulation before activation.
-- [ ] Warn when a policy produces unlawful or inconsistent results.
+- [x] Ensure company policies cannot override mandatory legal requirements.
+- [x] Add policy effective dates, version history, assignments, precedence, and simulation before activation.
+- [x] Warn when a policy produces unlawful or inconsistent results.
 
 ## P1 â€” payroll review, reports, and exports
 

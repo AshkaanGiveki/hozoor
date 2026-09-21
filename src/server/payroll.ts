@@ -43,6 +43,28 @@ export function isValidDateRange(start: Date, end?: Date | null) {
   return !end || end.getTime() > start.getTime();
 }
 
+export function validatePayrollPolicy(settings: unknown) {
+  if (!settings || typeof settings !== "object" || Array.isArray(settings)) return "Policy settings must be a JSON object.";
+  const record = settings as Record<string, unknown>;
+  const forbidden = ["minimumMonthlySalary", "taxRate", "taxBrackets", "employeeInsuranceRate", "employerInsuranceRate", "insuranceCeiling"];
+  const override = forbidden.find((key) => key in record);
+  if (override) return `Company policy cannot define legal rule '${override}'.`;
+  if (record.rounding !== undefined && !["nearest-rial", "floor", "ceil"].includes(String(record.rounding))) return "Policy rounding must be nearest-rial, floor, or ceil.";
+  if (record.graceMinutes !== undefined && (!Number.isInteger(record.graceMinutes) || (record.graceMinutes as number) < 0 || (record.graceMinutes as number) > 1440)) return "graceMinutes must be an integer from 0 to 1440.";
+  if (record.overtimeRequiresApproval !== undefined && typeof record.overtimeRequiresApproval !== "boolean") return "overtimeRequiresApproval must be boolean.";
+  if (record.paymentDay !== undefined && (!Number.isInteger(record.paymentDay) || (record.paymentDay as number) < 1 || (record.paymentDay as number) > 31)) return "paymentDay must be between 1 and 31.";
+  return null;
+}
+
+export function simulatePayrollPolicy(settings: unknown, input: { requestedOvertimeMinutes: number; approvedOvertimeMinutes?: number; amount: number }) {
+  const policy = (settings && typeof settings === "object" ? settings : {}) as Record<string, unknown>;
+  const requiresApproval = policy.overtimeRequiresApproval !== false;
+  const overtimeMinutes = requiresApproval ? Math.max(0, input.approvedOvertimeMinutes ?? 0) : Math.max(0, input.requestedOvertimeMinutes);
+  const rounding = policy.rounding ?? "nearest-rial";
+  const roundedAmount = rounding === "floor" ? Math.floor(input.amount) : rounding === "ceil" ? Math.ceil(input.amount) : Math.round(input.amount);
+  return { overtimeMinutes, roundedAmount, paymentDay: policy.paymentDay ?? null, overtimeRequiresApproval: requiresApproval };
+}
+
 export async function hasCompensationOverlap(employeeId: string, start: Date, end?: Date | null, excludeId?: string) {
   const rows = await db.compensationProfile.findMany({
     where: { employeeId, status: { not: CompensationStatus.ARCHIVED }, ...(excludeId ? { NOT: { id: excludeId } } : {}) },
@@ -65,4 +87,9 @@ export async function hasRuleOverlap(companyId: string, year: number, start: Dat
     const candidateEnd = end?.getTime() ?? Number.POSITIVE_INFINITY;
     return start.getTime() < rowEnd && row.effectiveFrom.getTime() < candidateEnd;
   });
+}
+
+export async function hasPolicyOverlap(companyId: string, name: string, start: Date, end?: Date | null, excludeId?: string) {
+  const rows = await db.payrollPolicy.findMany({ where: { companyId, name, status: { not: "ARCHIVED" }, ...(excludeId ? { NOT: { id: excludeId } } : {}) }, select: { effectiveFrom: true, effectiveTo: true } });
+  return rows.some((row) => start.getTime() < (row.effectiveTo?.getTime() ?? Number.POSITIVE_INFINITY) && row.effectiveFrom.getTime() < (end?.getTime() ?? Number.POSITIVE_INFINITY));
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canApprovePayrollPeriod, checksumRules, payrollPeriodTransitions, validateLegalRules } from "@/server/payroll";
+import { canApprovePayrollPeriod, checksumRules, payrollPeriodTransitions, simulatePayrollPolicy, validateLegalRules, validatePayrollPolicy } from "@/server/payroll";
 import { isEarningComponent } from "@/server/payroll-engine";
 import { summarizePayrollRegister } from "@/server/payroll-reporting";
 import { Prisma } from "@prisma/client";
@@ -39,5 +39,11 @@ describe("payroll rule safety", () => {
       { employeeId: "2", employeeCode: "E2", employeeName: "Two", departmentId: "d1", departmentName: "Engineering", gross: new Prisma.Decimal(200), deductions: new Prisma.Decimal(20), net: new Prisma.Decimal(180), employerInsurance: new Prisma.Decimal(40), paid: new Prisma.Decimal(0), paymentStatus: "PENDING" },
     ]);
     expect(summary).toEqual([{ departmentId: "d1", departmentName: "Engineering", employeeCount: 2, gross: "300", deductions: "30", net: "270", employerInsurance: "60", paid: "90", unmatched: 1 }]);
+  });
+
+  it("rejects legal overrides and simulates policy-only choices", () => {
+    expect(validatePayrollPolicy({ taxRate: 0.1 })).toContain("cannot define legal rule");
+    expect(validatePayrollPolicy({ rounding: "floor", graceMinutes: 15, overtimeRequiresApproval: true, paymentDay: 25 })).toBeNull();
+    expect(simulatePayrollPolicy({ rounding: "floor", overtimeRequiresApproval: true, paymentDay: 25 }, { requestedOvertimeMinutes: 120, approvedOvertimeMinutes: 60, amount: 100.9 })).toEqual({ overtimeMinutes: 60, roundedAmount: 100, paymentDay: 25, overtimeRequiresApproval: true });
   });
 });
