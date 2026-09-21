@@ -1,0 +1,3 @@
+ALTER TABLE "AttendanceDay" ADD COLUMN "nightWorkMinutes" INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE "AttendanceDay" ADD COLUMN "fridayWorkMinutes" INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE "AttendanceDay" ADD COLUMN "holidayWorkMinutes" INTEGER NOT NULL DEFAULT 0;

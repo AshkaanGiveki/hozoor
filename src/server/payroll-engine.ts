@@ -17,6 +17,9 @@ type RuleData = {
   insuranceCeilingMultiplier?: number;
   specialTaxRates?: Record<string, number>;
   taxAnnualized?: boolean;
+  nightWorkMultiplier?: number;
+  fridayWorkMultiplier?: number;
+  holidayWorkMultiplier?: number;
 };
 type PolicyData = { rounding?: "nearest-rial" | "floor" | "ceil"; overtimeRequiresApproval?: boolean };
 export type CompensationComponentType = "ALLOWANCE" | "BONUS" | "COMMISSION" | "BENEFIT" | "OTHER_EARNING" | "LOAN_REPAYMENT" | "ADVANCE_REPAYMENT" | "OTHER_DEDUCTION";
@@ -56,6 +59,7 @@ export function calculateProgressiveTax(base: Prisma.Decimal, rules: RuleData, t
   return rules.taxAnnualized ? result.div(12) : result;
 }
 export function calculateOvertimePay(hourlyRate: Prisma.Decimal, minutes: number, multiplier: number) { return hourlyRate.mul(minutes).div(60).mul(multiplier); }
+export function calculatePremiumPay(hourlyRate: Prisma.Decimal, minutes: number, multiplier?: number) { return multiplier === undefined ? money(0) : hourlyRate.mul(minutes).div(60).mul(Math.max(0, multiplier - 1)); }
 export function capInsurableBase(base: Prisma.Decimal, ceiling?: number) { return ceiling === undefined ? base : Prisma.Decimal.min(base, money(ceiling)); }
 export function calculateInsuranceCeiling(rules: RuleData, insuredDays: number) {
   if (rules.minimumDailyWage !== undefined && rules.insuranceCeilingMultiplier !== undefined) return money(rules.minimumDailyWage).mul(rules.insuranceCeilingMultiplier).mul(Math.max(0, insuredDays));
@@ -86,11 +90,11 @@ export async function calculatePayrollPeriod(periodId: string, companyId: string
   for (const employee of employees) {
     const compensation = await db.compensationProfile.findFirst({ where: { employeeId: employee.id, status: "ACTIVE", effectiveFrom: { lte: period.endDate }, OR: [{ effectiveTo: null }, { effectiveTo: { gt: period.startDate } }] }, orderBy: { effectiveFrom: "desc" } });
     if (!compensation) { missingCompensation.push(employee.employeeCode); continue; }
-    const days = await db.attendanceDay.findMany({ where: { employeeId: employee.id, date: { gte: period.startDate, lte: period.endDate } }, select: { date: true, validWorkMinutes: true, approvedOvertimeMinutes: true, rawOvertimeMinutes: true, lateMinutes: true, earlyDepartureMinutes: true, deficitMinutes: true, leaveMinutes: true, status: true } });
+    const days = await db.attendanceDay.findMany({ where: { employeeId: employee.id, date: { gte: period.startDate, lte: period.endDate } }, select: { date: true, validWorkMinutes: true, approvedOvertimeMinutes: true, rawOvertimeMinutes: true, lateMinutes: true, earlyDepartureMinutes: true, deficitMinutes: true, leaveMinutes: true, nightWorkMinutes: true, fridayWorkMinutes: true, holidayWorkMinutes: true, status: true } });
     const adjustments = await db.payrollAdjustment.findMany({ where: { periodId, employeeId: employee.id, payrollRunId: null }, select: { id: true, code: true, label: true, amount: true, taxable: true, insurable: true, reason: true } });
     const workedDays = days.filter((day) => day.validWorkMinutes > 0).length;
     const overtimeMinutes = days.reduce((sum, day) => sum + (policy.overtimeRequiresApproval === false ? day.rawOvertimeMinutes : day.approvedOvertimeMinutes), 0);
-    const attendanceSummary = { workedDays, absenceDays: days.filter((day) => day.status === "ABSENT").length, leaveDays: days.filter((day) => ["ON_LEAVE", "PARTIAL_LEAVE"].includes(day.status)).length, holidayDays: days.filter((day) => day.status === "HOLIDAY").length, validWorkMinutes: days.reduce((sum, day) => sum + day.validWorkMinutes, 0), overtimeMinutes, leaveMinutes: days.reduce((sum, day) => sum + day.leaveMinutes, 0), lateMinutes: days.reduce((sum, day) => sum + day.lateMinutes, 0), earlyDepartureMinutes: days.reduce((sum, day) => sum + day.earlyDepartureMinutes, 0), deficitMinutes: days.reduce((sum, day) => sum + day.deficitMinutes, 0) };
+    const attendanceSummary = { workedDays, absenceDays: days.filter((day) => day.status === "ABSENT").length, leaveDays: days.filter((day) => ["ON_LEAVE", "PARTIAL_LEAVE"].includes(day.status)).length, holidayDays: days.filter((day) => day.status === "HOLIDAY").length, validWorkMinutes: days.reduce((sum, day) => sum + day.validWorkMinutes, 0), overtimeMinutes, leaveMinutes: days.reduce((sum, day) => sum + day.leaveMinutes, 0), lateMinutes: days.reduce((sum, day) => sum + day.lateMinutes, 0), earlyDepartureMinutes: days.reduce((sum, day) => sum + day.earlyDepartureMinutes, 0), deficitMinutes: days.reduce((sum, day) => sum + day.deficitMinutes, 0), nightWorkMinutes: days.reduce((sum, day) => sum + day.nightWorkMinutes, 0), fridayWorkMinutes: days.reduce((sum, day) => sum + day.fridayWorkMinutes, 0), holidayWorkMinutes: days.reduce((sum, day) => sum + day.holidayWorkMinutes, 0) };
     const components = Array.isArray(compensation.components) ? compensation.components as unknown as Component[] : [];
     const partTimeRatio = compensation.partTimeRatio ?? money(1);
     const base = applyPartTimeRatio(money(compensation.baseSalary), partTimeRatio);
@@ -102,23 +106,33 @@ export async function calculatePayrollPeriod(periodId: string, companyId: string
     const componentDeductions = deductions.reduce((sum, item) => sum.plus(componentAmount(item)), money(0));
     const hourly = compensation.hourlyRate ? money(compensation.hourlyRate) : money(compensation.dailyRate ?? base.div(workingDays)).div(workingHours);
     const overtime = calculateOvertimePay(hourly, overtimeMinutes, overtimeMultiplier);
+    const nightPremium = calculatePremiumPay(hourly, attendanceSummary.nightWorkMinutes, rules.nightWorkMultiplier);
+    const fridayPremium = calculatePremiumPay(hourly, attendanceSummary.fridayWorkMinutes, rules.fridayWorkMultiplier);
+    const holidayPremium = calculatePremiumPay(hourly, attendanceSummary.holidayWorkMinutes, rules.holidayWorkMultiplier);
+    const premiumEarnings = nightPremium.plus(fridayPremium).plus(holidayPremium);
     const adjustmentEarnings = adjustments.filter((item) => item.amount.gt(0)).reduce((sum, item) => sum.plus(item.amount), money(0));
     const adjustmentDeductions = adjustments.filter((item) => item.amount.lt(0)).reduce((sum, item) => sum.plus(item.amount.abs()), money(0));
-    const gross = rounded(base.plus(componentEarnings).plus(overtime).plus(adjustmentEarnings), policy);
+    const gross = rounded(base.plus(componentEarnings).plus(overtime).plus(premiumEarnings).plus(adjustmentEarnings), policy);
     const taxableAdjustments = adjustments.filter((item) => item.taxable).reduce((sum, item) => sum.plus(item.amount), money(0));
     const insurableAdjustments = adjustments.filter((item) => item.insurable).reduce((sum, item) => sum.plus(item.amount), money(0));
-    const taxable = rounded(base.plus(earnings.filter((item) => item.taxable !== false).reduce((sum, item) => sum.plus(componentAmount(item)), money(0))).plus(overtime).plus(taxableAdjustments), policy);
-    const calculatedInsurable = rounded(base.plus(earnings.filter((item) => item.insurable !== false).reduce((sum, item) => sum.plus(componentAmount(item)), money(0))).plus(overtime).plus(insurableAdjustments), policy);
+    const taxable = rounded(base.plus(earnings.filter((item) => item.taxable !== false).reduce((sum, item) => sum.plus(componentAmount(item)), money(0))).plus(overtime).plus(premiumEarnings).plus(taxableAdjustments), policy);
+    const calculatedInsurable = rounded(base.plus(earnings.filter((item) => item.insurable !== false).reduce((sum, item) => sum.plus(componentAmount(item)), money(0))).plus(overtime).plus(premiumEarnings).plus(insurableAdjustments), policy);
     const insuredDays = Math.max(0, Math.floor((period.endDate.getTime() - period.startDate.getTime()) / 86_400_000) + 1);
     const insurable = capInsurableBase(calculatedInsurable, calculateInsuranceCeiling(rules, insuredDays)?.toNumber());
     const employeeInsurance = rounded(insurable.mul(employeeInsuranceRate), policy);
     const employerInsurance = rounded(insurable.mul(employerInsuranceRate), policy);
     const tax = rounded(calculateProgressiveTax(taxable, rules, compensation.taxStatus), policy);
     const net = rounded(gross.minus(employeeInsurance).minus(tax).minus(componentDeductions).minus(adjustmentDeductions), policy);
+    const premiumLines = [
+      { type: "OTHER_EARNING" as const, code: "NIGHT_WORK_PREMIUM", label: "Night-work premium", amount: rounded(nightPremium, policy), sourceData: { minutes: attendanceSummary.nightWorkMinutes, multiplier: rules.nightWorkMultiplier ?? null } },
+      { type: "OTHER_EARNING" as const, code: "FRIDAY_WORK_PREMIUM", label: "Friday-work premium", amount: rounded(fridayPremium, policy), sourceData: { minutes: attendanceSummary.fridayWorkMinutes, multiplier: rules.fridayWorkMultiplier ?? null } },
+      { type: "OTHER_EARNING" as const, code: "HOLIDAY_WORK_PREMIUM", label: "Holiday-work premium", amount: rounded(holidayPremium, policy), sourceData: { minutes: attendanceSummary.holidayWorkMinutes, multiplier: rules.holidayWorkMultiplier ?? null } },
+    ].filter((line) => line.amount.gt(0));
     const lines = [
       { type: "BASE_SALARY" as const, code: "BASE", label: "Base salary", amount: rounded(base, policy), sourceData: { compensationProfileId: compensation.id, workedDays } },
       ...components.map((item) => ({ type: (item.type ?? "ALLOWANCE") as "ALLOWANCE" | "BONUS" | "COMMISSION" | "BENEFIT" | "OTHER_EARNING" | "LOAN_REPAYMENT" | "ADVANCE_REPAYMENT" | "OTHER_DEDUCTION", code: item.code, label: item.label, amount: rounded(isEarningComponent(item) ? componentAmount(item) : componentAmount(item).neg(), policy), sourceData: { compensationProfileId: compensation.id, componentType: item.type ?? "ALLOWANCE", taxable: item.taxable !== false, insurable: item.insurable !== false, partTimeRatio: partTimeRatio.toString(), prorated: isEarningComponent(item) && item.prorateForPartTime !== false } })),
       { type: "OVERTIME" as const, code: "OVERTIME", label: "Policy overtime", amount: rounded(overtime, policy), sourceData: { overtimeMinutes, multiplier: overtimeMultiplier, requiresApproval: policy.overtimeRequiresApproval !== false } },
+      ...premiumLines,
       ...adjustments.map((item) => ({ type: item.amount.gte(0) ? "OTHER_EARNING" as const : "OTHER_DEDUCTION" as const, code: item.code, label: item.label, amount: rounded(item.amount, policy), sourceData: { adjustmentId: item.id, reason: item.reason, taxable: item.taxable, insurable: item.insurable } })),
       { type: "EMPLOYEE_INSURANCE" as const, code: "EMPLOYEE_INSURANCE", label: "Employee insurance", amount: employeeInsurance.neg(), sourceData: { rate: employeeInsuranceRate, base: insurable.toString(), insuredDays, ceiling: calculateInsuranceCeiling(rules, insuredDays)?.toString() ?? null } },
       { type: "TAX" as const, code: "TAX", label: "Tax", amount: tax.neg(), sourceData: { rate: taxRate, brackets: rules.taxBrackets ?? null, taxCategory: compensation.taxStatus, annualized: rules.taxAnnualized === true, base: taxable.toString() } },
