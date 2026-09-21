@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { canApprovePayrollPeriod, canConfirmPayrollPayment, canManagePayroll, checksumRules, maskBankAccountLast4, payrollPeriodTransitions, productionPayrollGate, simulatePayrollPolicy, validateCompensationMinimum, validateLegalRules, validatePayrollPolicy, validateRuleSetApproval } from "@/server/payroll";
-import { applyPartTimeRatio, calculateInsuranceCeiling, calculateOvertimePay, calculateProgressiveTax, capInsurableBase, isEarningComponent, roundPayrollAmount } from "@/server/payroll-engine";
+import { applyPartTimeRatio, calculateAttendanceDeductions, calculateInsuranceCeiling, calculateOvertimePay, calculateProgressiveTax, capInsurableBase, isEarningComponent, roundPayrollAmount } from "@/server/payroll-engine";
 import { calculateIranianEidi, calculateIranianSeverance, iranianPrivateSector1405Rules } from "@/server/iranian-payroll-law";
 import { reconcilePayrollTotals, summarizePayrollRegister } from "@/server/payroll-reporting";
 import { Prisma, RoleCode } from "@prisma/client";
@@ -8,6 +8,7 @@ import { buildAuditHash, verifyAuditChain } from "@/server/audit";
 import { createPayrollIntegrationPayload, createPayrollWebhookAdapter } from "@/server/payroll-integration";
 import { resolveIntegrationSubmissionOutcome } from "@/server/payroll-integration";
 import { canReadAll } from "@/server/permissions";
+import annual1405Fixture from "../fixtures/iranian-payroll-1405.json";
 
 describe("payroll rule safety", () => {
   it("changes the audit hash when chained audit content changes", () => {
@@ -155,6 +156,51 @@ describe("payroll rule safety", () => {
     expect(applyPartTimeRatio(new Prisma.Decimal(1000))).toEqual(new Prisma.Decimal(1000));
   });
 
+  it("locks the 1405 regression fixture to the draft legal rules", () => {
+    expect(iranianPrivateSector1405Rules).toMatchObject(annual1405Fixture);
+    expect(iranianPrivateSector1405Rules.taxBrackets).toEqual(annual1405Fixture.taxBrackets);
+    expect(iranianPrivateSector1405Rules.specialTaxRates).toEqual(annual1405Fixture.specialTaxRates);
+  });
+
+  it("covers Iranian tax threshold edges using annualized monthly bases", () => {
+    expect(calculateProgressiveTax(new Prisma.Decimal(400_000_000), iranianPrivateSector1405Rules)).toEqual(new Prisma.Decimal(0));
+    expect(calculateProgressiveTax(new Prisma.Decimal(800_000_000), iranianPrivateSector1405Rules)).toEqual(new Prisma.Decimal(40_000_000));
+    expect(calculateProgressiveTax(new Prisma.Decimal(1_000_000_000), iranianPrivateSector1405Rules)).toEqual(new Prisma.Decimal(70_000_000));
+    expect(calculateProgressiveTax(new Prisma.Decimal(1_200_000_000), iranianPrivateSector1405Rules)).toEqual(new Prisma.Decimal(110_000_000));
+    expect(calculateProgressiveTax(new Prisma.Decimal(1_400_000_000), iranianPrivateSector1405Rules)).toEqual(new Prisma.Decimal(160_000_000));
+    expect(calculateProgressiveTax(new Prisma.Decimal(1_600_000_000), iranianPrivateSector1405Rules)).toEqual(new Prisma.Decimal(220_000_000));
+  });
+
+  it("covers insurance ceilings for every Gregorian month length", () => {
+    expect(calculateInsuranceCeiling(iranianPrivateSector1405Rules, 28)).toEqual(new Prisma.Decimal("1086202600"));
+    expect(calculateInsuranceCeiling(iranianPrivateSector1405Rules, 29)).toEqual(new Prisma.Decimal("1124995550"));
+    expect(calculateInsuranceCeiling(iranianPrivateSector1405Rules, 30)).toEqual(new Prisma.Decimal("1163788500"));
+    expect(calculateInsuranceCeiling(iranianPrivateSector1405Rules, 31)).toEqual(new Prisma.Decimal("1202581450"));
+    expect(calculateInsuranceCeiling(iranianPrivateSector1405Rules, 0)).toEqual(new Prisma.Decimal(0));
+  });
+
+  it("covers leap-year and partial-year benefit proration", () => {
+    expect(calculateIranianEidi(iranianPrivateSector1405Rules.minimumDailyWage, 366)).toEqual({ minimum: 333421989.0410959, maximum: 500132983.5616439 });
+    expect(calculateIranianEidi(iranianPrivateSector1405Rules.minimumDailyWage, 182.5)).toEqual({ minimum: 166255500, maximum: 249383250 });
+    expect(calculateIranianSeverance(iranianPrivateSector1405Rules.minimumMonthlySalary, 182.5)).toBe(83127750);
+    expect(calculateIranianSeverance(iranianPrivateSector1405Rules.minimumMonthlySalary, 0)).toBe(0);
+  });
+
+  it("applies part-time minimums proportionally and rejects only below-ratio pay", () => {
+    const halfTimeMinimum = iranianPrivateSector1405Rules.minimumMonthlySalary * 0.5;
+    expect(applyPartTimeRatio(new Prisma.Decimal(iranianPrivateSector1405Rules.minimumMonthlySalary), 0.5).toNumber()).toBe(halfTimeMinimum);
+    expect(validateCompensationMinimum(halfTimeMinimum, { minimumMonthlySalary: halfTimeMinimum })).toBeNull();
+    expect(validateCompensationMinimum(halfTimeMinimum - 1, { minimumMonthlySalary: halfTimeMinimum })).toContain("minimum monthly salary");
+  });
+
+  it("calculates attendance deductions only when the company policy enables them", () => {
+    const daily = new Prisma.Decimal(1000);
+    const hourly = new Prisma.Decimal(125);
+    const attendance = { absenceDays: 1, leaveDays: 2, deficitMinutes: 60 };
+    expect(calculateAttendanceDeductions(daily, hourly, attendance)).toEqual({ absence: new Prisma.Decimal(0), shortfall: new Prisma.Decimal(0), total: new Prisma.Decimal(0) });
+    expect(calculateAttendanceDeductions(daily, hourly, attendance, { absenceDeductionMode: "DAILY_BASE", attendanceShortfallDeductionMode: "HOURLY_BASE" })).toEqual({ absence: new Prisma.Decimal(1000), shortfall: new Prisma.Decimal(125), total: new Prisma.Decimal(1125) });
+  });
+
   it("masks sensitive bank account suffixes at the response boundary", () => {
     expect(maskBankAccountLast4("1234")).toBe("••••1234");
     expect(maskBankAccountLast4(null)).toBeNull();
@@ -164,6 +210,8 @@ describe("payroll rule safety", () => {
     expect(validatePayrollPolicy({ taxRate: 0.1 })).toContain("cannot define legal rule");
     expect(validatePayrollPolicy({ rounding: "floor", graceMinutes: 15, overtimeRequiresApproval: true, paymentDay: 25 })).toBeNull();
     expect(simulatePayrollPolicy({ rounding: "floor", overtimeRequiresApproval: true, paymentDay: 25 }, { requestedOvertimeMinutes: 120, approvedOvertimeMinutes: 60, amount: 100.9 })).toEqual({ overtimeMinutes: 60, roundedAmount: 100, paymentDay: 25, overtimeRequiresApproval: true });
+    expect(validatePayrollPolicy({ absenceDeductionMode: "DAILY_BASE", attendanceShortfallDeductionMode: "HOURLY_BASE" })).toBeNull();
+    expect(validatePayrollPolicy({ absenceDeductionMode: "LEGAL_MAGIC" })).toContain("absenceDeductionMode");
   });
 
   it("requires a legal source before a rule set can be approved", () => {

@@ -21,7 +21,8 @@ type RuleData = {
   fridayWorkMultiplier?: number;
   holidayWorkMultiplier?: number;
 };
-type PolicyData = { rounding?: "nearest-rial" | "floor" | "ceil"; overtimeRequiresApproval?: boolean };
+type PolicyData = { rounding?: "nearest-rial" | "floor" | "ceil"; overtimeRequiresApproval?: boolean; absenceDeductionMode?: "NONE" | "DAILY_BASE"; attendanceShortfallDeductionMode?: "NONE" | "HOURLY_BASE" };
+export type AttendancePayrollSummary = { absenceDays: number; leaveDays: number; deficitMinutes: number };
 export type CompensationComponentType = "ALLOWANCE" | "BONUS" | "COMMISSION" | "BENEFIT" | "OTHER_EARNING" | "LOAN_REPAYMENT" | "ADVANCE_REPAYMENT" | "OTHER_DEDUCTION";
 type Component = { code: string; label: string; type?: CompensationComponentType; amount: number; taxable?: boolean; insurable?: boolean; prorateForPartTime?: boolean };
 
@@ -65,6 +66,11 @@ export function calculateInsuranceCeiling(rules: RuleData, insuredDays: number) 
   if (rules.minimumDailyWage !== undefined && rules.insuranceCeilingMultiplier !== undefined) return money(rules.minimumDailyWage).mul(rules.insuranceCeilingMultiplier).mul(Math.max(0, insuredDays));
   return rules.insuranceCeiling === undefined ? undefined : money(rules.insuranceCeiling);
 }
+export function calculateAttendanceDeductions(dailyBase: Prisma.Decimal, hourlyBase: Prisma.Decimal, attendance: AttendancePayrollSummary, policy: PolicyData = {}) {
+  const absence = policy.absenceDeductionMode === "DAILY_BASE" ? dailyBase.mul(Math.max(0, attendance.absenceDays)) : money(0);
+  const shortfall = policy.attendanceShortfallDeductionMode === "HOURLY_BASE" ? hourlyBase.mul(Math.max(0, attendance.deficitMinutes)).div(60) : money(0);
+  return { absence, shortfall, total: absence.plus(shortfall) };
+}
 
 export async function calculatePayrollPeriod(periodId: string, companyId: string) {
   const productionGateError = productionPayrollGate();
@@ -105,6 +111,8 @@ export async function calculatePayrollPeriod(periodId: string, companyId: string
     const componentEarnings = earnings.reduce((sum, item) => sum.plus(componentAmount(item)), money(0));
     const componentDeductions = deductions.reduce((sum, item) => sum.plus(componentAmount(item)), money(0));
     const hourly = compensation.hourlyRate ? money(compensation.hourlyRate) : money(compensation.dailyRate ?? base.div(workingDays)).div(workingHours);
+    const daily = compensation.dailyRate ? money(compensation.dailyRate) : base.div(workingDays);
+    const attendanceDeductions = calculateAttendanceDeductions(daily, hourly, attendanceSummary, policy);
     const overtime = calculateOvertimePay(hourly, overtimeMinutes, overtimeMultiplier);
     const nightPremium = calculatePremiumPay(hourly, attendanceSummary.nightWorkMinutes, rules.nightWorkMultiplier);
     const fridayPremium = calculatePremiumPay(hourly, attendanceSummary.fridayWorkMinutes, rules.fridayWorkMultiplier);
@@ -122,7 +130,7 @@ export async function calculatePayrollPeriod(periodId: string, companyId: string
     const employeeInsurance = rounded(insurable.mul(employeeInsuranceRate), policy);
     const employerInsurance = rounded(insurable.mul(employerInsuranceRate), policy);
     const tax = rounded(calculateProgressiveTax(taxable, rules, compensation.taxStatus), policy);
-    const net = rounded(gross.minus(employeeInsurance).minus(tax).minus(componentDeductions).minus(adjustmentDeductions), policy);
+    const net = rounded(gross.minus(employeeInsurance).minus(tax).minus(componentDeductions).minus(adjustmentDeductions).minus(attendanceDeductions.total), policy);
     const premiumLines = [
       { type: "OTHER_EARNING" as const, code: "NIGHT_WORK_PREMIUM", label: "Night-work premium", amount: rounded(nightPremium, policy), sourceData: { minutes: attendanceSummary.nightWorkMinutes, multiplier: rules.nightWorkMultiplier ?? null } },
       { type: "OTHER_EARNING" as const, code: "FRIDAY_WORK_PREMIUM", label: "Friday-work premium", amount: rounded(fridayPremium, policy), sourceData: { minutes: attendanceSummary.fridayWorkMinutes, multiplier: rules.fridayWorkMultiplier ?? null } },
@@ -134,6 +142,8 @@ export async function calculatePayrollPeriod(periodId: string, companyId: string
       { type: "OVERTIME" as const, code: "OVERTIME", label: "Policy overtime", amount: rounded(overtime, policy), sourceData: { overtimeMinutes, multiplier: overtimeMultiplier, requiresApproval: policy.overtimeRequiresApproval !== false } },
       ...premiumLines,
       ...adjustments.map((item) => ({ type: item.amount.gte(0) ? "OTHER_EARNING" as const : "OTHER_DEDUCTION" as const, code: item.code, label: item.label, amount: rounded(item.amount, policy), sourceData: { adjustmentId: item.id, reason: item.reason, taxable: item.taxable, insurable: item.insurable } })),
+      { type: "OTHER_DEDUCTION" as const, code: "ABSENCE_DEDUCTION", label: "Unpaid absence deduction", amount: rounded(attendanceDeductions.absence.neg(), policy), sourceData: { mode: policy.absenceDeductionMode ?? "NONE", absenceDays: attendanceSummary.absenceDays, dailyBase: daily.toString() } },
+      { type: "OTHER_DEDUCTION" as const, code: "ATTENDANCE_SHORTFALL_DEDUCTION", label: "Attendance shortfall deduction", amount: rounded(attendanceDeductions.shortfall.neg(), policy), sourceData: { mode: policy.attendanceShortfallDeductionMode ?? "NONE", deficitMinutes: attendanceSummary.deficitMinutes, hourlyBase: hourly.toString() } },
       { type: "EMPLOYEE_INSURANCE" as const, code: "EMPLOYEE_INSURANCE", label: "Employee insurance", amount: employeeInsurance.neg(), sourceData: { rate: employeeInsuranceRate, base: insurable.toString(), insuredDays, ceiling: calculateInsuranceCeiling(rules, insuredDays)?.toString() ?? null } },
       { type: "TAX" as const, code: "TAX", label: "Tax", amount: tax.neg(), sourceData: { rate: taxRate, brackets: rules.taxBrackets ?? null, taxCategory: compensation.taxStatus, annualized: rules.taxAnnualized === true, base: taxable.toString() } },
       { type: "EMPLOYER_INSURANCE" as const, code: "EMPLOYER_INSURANCE", label: "Employer insurance", amount: employerInsurance, sourceData: { rate: employerInsuranceRate, base: insurable.toString(), insuredDays } },
