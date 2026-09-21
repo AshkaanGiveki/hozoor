@@ -1,10 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { canApprovePayrollPeriod, canConfirmPayrollPayment, canManagePayroll, checksumRules, maskBankAccountLast4, payrollPeriodTransitions, simulatePayrollPolicy, validateCompensationMinimum, validateLegalRules, validatePayrollPolicy, validateRuleSetApproval } from "@/server/payroll";
 import { calculateOvertimePay, calculateProgressiveTax, capInsurableBase, isEarningComponent, roundPayrollAmount } from "@/server/payroll-engine";
 import { reconcilePayrollTotals, summarizePayrollRegister } from "@/server/payroll-reporting";
 import { Prisma, RoleCode } from "@prisma/client";
 import { buildAuditHash, verifyAuditChain } from "@/server/audit";
-import { createPayrollIntegrationPayload } from "@/server/payroll-integration";
+import { createPayrollIntegrationPayload, createPayrollWebhookAdapter } from "@/server/payroll-integration";
 import { resolveIntegrationSubmissionOutcome } from "@/server/payroll-integration";
 import { canReadAll } from "@/server/permissions";
 
@@ -39,6 +39,20 @@ describe("payroll rule safety", () => {
     expect(resolveIntegrationSubmissionOutcome(false, 1, 5, now)).toEqual({ status: "RETRYING", nextAttemptAt: new Date("2026-01-01T00:01:00.000Z") });
     expect(resolveIntegrationSubmissionOutcome(false, 5, 5, now)).toEqual({ status: "FAILED", nextAttemptAt: null });
     expect(resolveIntegrationSubmissionOutcome(true, 1, 5, now)).toEqual({ status: "SUCCEEDED", nextAttemptAt: null });
+  });
+
+  it("requires explicit webhook acceptance and sends the idempotency key", async () => {
+    const payload = { schemaVersion: 1 as const, idempotencyKey: "payroll:c:p", companyId: "c", periodId: "p", period: { year: 1405, month: 1, revision: 0, status: "PAID" }, rows: [], totals: { gross: "0", deductions: "0", netPayable: "0", employerInsurance: "0" }, checksum: "checksum" };
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ externalReference: "ref-without-acceptance" }), { status: 200, headers: { "Content-Type": "application/json" } }));
+    vi.stubGlobal("fetch", fetchMock);
+    const rejected = await createPayrollWebhookAdapter({ endpoint: "https://example.test/payroll", secret: "secret" }).submit(payload);
+    expect(rejected.accepted).toBe(false);
+    expect(rejected.message).toContain("without explicit acceptance");
+    expect(fetchMock).toHaveBeenCalledWith("https://example.test/payroll", expect.objectContaining({ headers: expect.objectContaining({ "X-Idempotency-Key": payload.idempotencyKey, Authorization: "Bearer secret" }) }));
+    fetchMock.mockResolvedValue(new Response(JSON.stringify({ accepted: true, externalReference: "ref-1" }), { status: 202, headers: { "Content-Type": "application/json" } }));
+    const accepted = await createPayrollWebhookAdapter({ endpoint: "https://example.test/payroll" }).submit(payload);
+    expect(accepted).toMatchObject({ accepted: true, externalReference: "ref-1" });
+    vi.unstubAllGlobals();
   });
   it("requires a separate reviewer and an explicit review state", () => {
     expect(canApprovePayrollPeriod("IN_REVIEW", "creator", "reviewer")).toBe(true);

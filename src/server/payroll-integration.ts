@@ -36,8 +36,32 @@ export type PayrollIntegrationPayload = {
 
 export type PayrollIntegrationAdapter = {
   name: string;
-  submit(payload: PayrollIntegrationPayload): Promise<{ accepted: boolean; externalReference?: string; message?: string }>;
+  submit(payload: PayrollIntegrationPayload): Promise<{ accepted: boolean; externalReference?: string; message?: string; response?: unknown }>;
 };
+
+type PayrollWebhookOptions = { endpoint?: string; secret?: string };
+
+export function createPayrollWebhookAdapter(options: PayrollWebhookOptions = {}): PayrollIntegrationAdapter {
+  const endpoint = options.endpoint ?? process.env.PAYROLL_WEBHOOK_URL;
+  const secret = options.secret ?? process.env.PAYROLL_WEBHOOK_SECRET;
+  return {
+    name: "webhook",
+    async submit(payload) {
+      if (!endpoint) return { accepted: false, message: "PAYROLL_WEBHOOK_URL is not configured" };
+      try {
+        const response = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json", "X-Idempotency-Key": payload.idempotencyKey, ...(secret ? { Authorization: `Bearer ${secret}` } : {}) }, body: JSON.stringify({ event: "payroll.submission", data: payload }) });
+        const bodyText = await response.text().catch(() => "");
+        let body: unknown = bodyText || null;
+        try { body = bodyText ? JSON.parse(bodyText) : null; } catch { /* Keep non-JSON provider bodies for diagnostics. */ }
+        const record = body && typeof body === "object" ? body as { accepted?: unknown; externalReference?: unknown; message?: unknown } : null;
+        const accepted = response.ok && record?.accepted === true;
+        return { accepted, externalReference: typeof record?.externalReference === "string" ? record.externalReference : undefined, message: accepted ? undefined : typeof record?.message === "string" ? record.message : `Provider returned ${response.status} without explicit acceptance`, response: body };
+      } catch (error) {
+        return { accepted: false, message: error instanceof Error ? error.message : "Payroll webhook request failed" };
+      }
+    },
+  };
+}
 
 const sum = (values: Prisma.Decimal[]) => values.reduce((total, value) => total.plus(value), new Prisma.Decimal(0)).toString();
 
