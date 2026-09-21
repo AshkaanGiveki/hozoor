@@ -11,8 +11,12 @@ type RuleData = {
   taxRate?: number;
   taxExemption?: number;
   insuranceCeiling?: number;
-  taxBrackets?: Array<{ upTo?: number; rate: number }>;
+  taxBrackets?: ReadonlyArray<{ upTo?: number; rate: number }>;
   minimumMonthlySalary?: number;
+  minimumDailyWage?: number;
+  insuranceCeilingMultiplier?: number;
+  specialTaxRates?: Record<string, number>;
+  taxAnnualized?: boolean;
 };
 type PolicyData = { rounding?: "nearest-rial" | "floor" | "ceil"; overtimeRequiresApproval?: boolean };
 export type CompensationComponentType = "ALLOWANCE" | "BONUS" | "COMMISSION" | "BENEFIT" | "OTHER_EARNING" | "LOAN_REPAYMENT" | "ADVANCE_REPAYMENT" | "OTHER_DEDUCTION";
@@ -32,8 +36,14 @@ export function roundPayrollAmount(value: Prisma.Decimal, rounding: PolicyData["
   return value.toDecimalPlaces(0, Prisma.Decimal.ROUND_HALF_UP);
 }
 function rounded(value: Prisma.Decimal, policy: PolicyData = {}) { return roundPayrollAmount(value, policy.rounding); }
-export function calculateProgressiveTax(base: Prisma.Decimal, rules: RuleData) {
-  const taxable = base.minus(rules.taxExemption ?? 0).greaterThan(0) ? base.minus(rules.taxExemption ?? 0) : money(0);
+export function calculateProgressiveTax(base: Prisma.Decimal, rules: RuleData, taxCategory?: string) {
+  const periodBase = rules.taxAnnualized ? base.mul(12) : base;
+  const taxable = periodBase.minus(rules.taxExemption ?? 0).greaterThan(0) ? periodBase.minus(rules.taxExemption ?? 0) : money(0);
+  const specialRate = taxCategory ? rules.specialTaxRates?.[taxCategory] : undefined;
+  if (specialRate !== undefined) {
+    const result = taxable.mul(specialRate);
+    return rules.taxAnnualized ? result.div(12) : result;
+  }
   if (!rules.taxBrackets?.length) return taxable.mul(rules.taxRate ?? 0);
   let lower = money(0); let result = money(0);
   for (const bracket of rules.taxBrackets) {
@@ -43,10 +53,14 @@ export function calculateProgressiveTax(base: Prisma.Decimal, rules: RuleData) {
     lower = upper;
     if (taxable.lessThanOrEqualTo(upper)) break;
   }
-  return result;
+  return rules.taxAnnualized ? result.div(12) : result;
 }
 export function calculateOvertimePay(hourlyRate: Prisma.Decimal, minutes: number, multiplier: number) { return hourlyRate.mul(minutes).div(60).mul(multiplier); }
 export function capInsurableBase(base: Prisma.Decimal, ceiling?: number) { return ceiling === undefined ? base : Prisma.Decimal.min(base, money(ceiling)); }
+export function calculateInsuranceCeiling(rules: RuleData, insuredDays: number) {
+  if (rules.minimumDailyWage !== undefined && rules.insuranceCeilingMultiplier !== undefined) return money(rules.minimumDailyWage).mul(rules.insuranceCeilingMultiplier).mul(Math.max(0, insuredDays));
+  return rules.insuranceCeiling === undefined ? undefined : money(rules.insuranceCeiling);
+}
 
 export async function calculatePayrollPeriod(periodId: string, companyId: string) {
   const productionGateError = productionPayrollGate();
@@ -80,7 +94,7 @@ export async function calculatePayrollPeriod(periodId: string, companyId: string
     const components = Array.isArray(compensation.components) ? compensation.components as unknown as Component[] : [];
     const partTimeRatio = compensation.partTimeRatio ?? money(1);
     const base = applyPartTimeRatio(money(compensation.baseSalary), partTimeRatio);
-    if (rules.minimumMonthlySalary !== undefined && base.lessThan(rules.minimumMonthlySalary)) throw new Error(`COMPENSATION_BELOW_MINIMUM:${employee.employeeCode}`);
+    if (rules.minimumMonthlySalary !== undefined && base.lessThan(money(rules.minimumMonthlySalary).mul(partTimeRatio))) throw new Error(`COMPENSATION_BELOW_MINIMUM:${employee.employeeCode}`);
     const earnings = components.filter(isEarningComponent);
     const deductions = components.filter((item) => !isEarningComponent(item));
     const componentAmount = (item: Component) => applyPartTimeRatio(money(item.amount), isEarningComponent(item) && item.prorateForPartTime !== false ? partTimeRatio : null);
@@ -95,19 +109,20 @@ export async function calculatePayrollPeriod(periodId: string, companyId: string
     const insurableAdjustments = adjustments.filter((item) => item.insurable).reduce((sum, item) => sum.plus(item.amount), money(0));
     const taxable = rounded(base.plus(earnings.filter((item) => item.taxable !== false).reduce((sum, item) => sum.plus(componentAmount(item)), money(0))).plus(overtime).plus(taxableAdjustments), policy);
     const calculatedInsurable = rounded(base.plus(earnings.filter((item) => item.insurable !== false).reduce((sum, item) => sum.plus(componentAmount(item)), money(0))).plus(overtime).plus(insurableAdjustments), policy);
-    const insurable = capInsurableBase(calculatedInsurable, rules.insuranceCeiling);
+    const insuredDays = Math.max(0, Math.floor((period.endDate.getTime() - period.startDate.getTime()) / 86_400_000) + 1);
+    const insurable = capInsurableBase(calculatedInsurable, calculateInsuranceCeiling(rules, insuredDays)?.toNumber());
     const employeeInsurance = rounded(insurable.mul(employeeInsuranceRate), policy);
     const employerInsurance = rounded(insurable.mul(employerInsuranceRate), policy);
-    const tax = rounded(calculateProgressiveTax(taxable, rules), policy);
+    const tax = rounded(calculateProgressiveTax(taxable, rules, compensation.taxStatus), policy);
     const net = rounded(gross.minus(employeeInsurance).minus(tax).minus(componentDeductions).minus(adjustmentDeductions), policy);
     const lines = [
       { type: "BASE_SALARY" as const, code: "BASE", label: "Base salary", amount: rounded(base, policy), sourceData: { compensationProfileId: compensation.id, workedDays } },
       ...components.map((item) => ({ type: (item.type ?? "ALLOWANCE") as "ALLOWANCE" | "BONUS" | "COMMISSION" | "BENEFIT" | "OTHER_EARNING" | "LOAN_REPAYMENT" | "ADVANCE_REPAYMENT" | "OTHER_DEDUCTION", code: item.code, label: item.label, amount: rounded(isEarningComponent(item) ? componentAmount(item) : componentAmount(item).neg(), policy), sourceData: { compensationProfileId: compensation.id, componentType: item.type ?? "ALLOWANCE", taxable: item.taxable !== false, insurable: item.insurable !== false, partTimeRatio: partTimeRatio.toString(), prorated: isEarningComponent(item) && item.prorateForPartTime !== false } })),
       { type: "OVERTIME" as const, code: "OVERTIME", label: "Policy overtime", amount: rounded(overtime, policy), sourceData: { overtimeMinutes, multiplier: overtimeMultiplier, requiresApproval: policy.overtimeRequiresApproval !== false } },
       ...adjustments.map((item) => ({ type: item.amount.gte(0) ? "OTHER_EARNING" as const : "OTHER_DEDUCTION" as const, code: item.code, label: item.label, amount: rounded(item.amount, policy), sourceData: { adjustmentId: item.id, reason: item.reason, taxable: item.taxable, insurable: item.insurable } })),
-      { type: "EMPLOYEE_INSURANCE" as const, code: "EMPLOYEE_INSURANCE", label: "Employee insurance", amount: employeeInsurance.neg(), sourceData: { rate: employeeInsuranceRate, base: insurable.toString() } },
-      { type: "TAX" as const, code: "TAX", label: "Tax", amount: tax.neg(), sourceData: { rate: taxRate, base: taxable.toString() } },
-      { type: "EMPLOYER_INSURANCE" as const, code: "EMPLOYER_INSURANCE", label: "Employer insurance", amount: employerInsurance, sourceData: { rate: employerInsuranceRate, base: insurable.toString() } },
+      { type: "EMPLOYEE_INSURANCE" as const, code: "EMPLOYEE_INSURANCE", label: "Employee insurance", amount: employeeInsurance.neg(), sourceData: { rate: employeeInsuranceRate, base: insurable.toString(), insuredDays, ceiling: calculateInsuranceCeiling(rules, insuredDays)?.toString() ?? null } },
+      { type: "TAX" as const, code: "TAX", label: "Tax", amount: tax.neg(), sourceData: { rate: taxRate, brackets: rules.taxBrackets ?? null, taxCategory: compensation.taxStatus, annualized: rules.taxAnnualized === true, base: taxable.toString() } },
+      { type: "EMPLOYER_INSURANCE" as const, code: "EMPLOYER_INSURANCE", label: "Employer insurance", amount: employerInsurance, sourceData: { rate: employerInsuranceRate, base: insurable.toString(), insuredDays } },
     ];
     const snapshot = { employeeId: employee.id, compensationProfileId: compensation.id, ruleSetId: period.ruleSetId, ruleSetChecksum: period.ruleSet.checksum, payrollPolicyId: period.payrollPolicyId, payrollPolicySettings: period.payrollPolicy?.settings ?? null, attendanceDayIds: days.map((day) => day.date.toISOString()), attendanceSummary, rules, source: "attendance-and-compensation" };
     calculations.push({ employeeId: employee.id, compensationProfileId: compensation.id, gross, taxable, insurable, employeeInsurance, employerInsurance, tax, net, lines, snapshot });

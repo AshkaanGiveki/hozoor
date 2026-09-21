@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { canApprovePayrollPeriod, canConfirmPayrollPayment, canManagePayroll, checksumRules, maskBankAccountLast4, payrollPeriodTransitions, productionPayrollGate, simulatePayrollPolicy, validateCompensationMinimum, validateLegalRules, validatePayrollPolicy, validateRuleSetApproval } from "@/server/payroll";
-import { applyPartTimeRatio, calculateOvertimePay, calculateProgressiveTax, capInsurableBase, isEarningComponent, roundPayrollAmount } from "@/server/payroll-engine";
+import { applyPartTimeRatio, calculateInsuranceCeiling, calculateOvertimePay, calculateProgressiveTax, capInsurableBase, isEarningComponent, roundPayrollAmount } from "@/server/payroll-engine";
+import { calculateIranianEidi, calculateIranianSeverance, iranianPrivateSector1405Rules } from "@/server/iranian-payroll-law";
 import { reconcilePayrollTotals, summarizePayrollRegister } from "@/server/payroll-reporting";
 import { Prisma, RoleCode } from "@prisma/client";
 import { buildAuditHash, verifyAuditChain } from "@/server/audit";
@@ -143,6 +144,11 @@ describe("payroll rule safety", () => {
     expect(capInsurableBase(new Prisma.Decimal(150), 100)).toEqual(new Prisma.Decimal(100));
     expect(calculateProgressiveTax(new Prisma.Decimal(150), { taxExemption: 50, taxBrackets: [{ upTo: 100, rate: 0.1 }, { rate: 0.2 }] })).toEqual(new Prisma.Decimal(10));
     expect(calculateProgressiveTax(new Prisma.Decimal(50), { taxExemption: 50, taxBrackets: [{ upTo: 100, rate: 0.1 }] })).toEqual(new Prisma.Decimal(0));
+    expect(calculateProgressiveTax(new Prisma.Decimal(100), { taxExemption: 40, taxBrackets: [{ upTo: 80, rate: 0.1 }, { rate: 0.15 }], specialTaxRates: { FACULTY_JUDGE: 0.1 } }, "FACULTY_JUDGE")).toEqual(new Prisma.Decimal(6));
+    expect(calculateProgressiveTax(new Prisma.Decimal(1_000_000_000), iranianPrivateSector1405Rules)).toEqual(new Prisma.Decimal(70_000_000));
+    expect(calculateInsuranceCeiling(iranianPrivateSector1405Rules, 30)).toEqual(new Prisma.Decimal("1163788500"));
+    expect(calculateIranianEidi(iranianPrivateSector1405Rules.minimumDailyWage, 365)).toEqual({ minimum: 332511000, maximum: 498766500 });
+    expect(calculateIranianSeverance(iranianPrivateSector1405Rules.minimumMonthlySalary, 365)).toBe(166255500);
     expect(calculateOvertimePay(new Prisma.Decimal(120), 0, 1.4)).toEqual(new Prisma.Decimal(0));
     expect(capInsurableBase(new Prisma.Decimal(99), 100)).toEqual(new Prisma.Decimal(99));
     expect(applyPartTimeRatio(new Prisma.Decimal(1000), 0.5)).toEqual(new Prisma.Decimal(500));
