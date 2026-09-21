@@ -9,6 +9,8 @@ describe("payroll rule safety", () => {
     expect(canApprovePayrollPeriod("CALCULATED", "creator", "reviewer")).toBe(false);
     expect(payrollPeriodTransitions.CALCULATED).toContain("IN_REVIEW");
     expect(payrollPeriodTransitions.CALCULATED).not.toContain("APPROVED");
+    expect(payrollPeriodTransitions.LOCKED).toContain("REVERSED");
+    expect(payrollPeriodTransitions.LOCKED).not.toContain("CORRECTED");
   });
 
   it("rejects incomplete legal rules", () => {

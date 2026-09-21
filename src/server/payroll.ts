@@ -12,7 +12,7 @@ export const payrollPeriodTransitions: Record<PayrollPeriodStatus, PayrollPeriod
   IN_REVIEW: [PayrollPeriodStatus.APPROVED, PayrollPeriodStatus.CORRECTED],
   APPROVED: [PayrollPeriodStatus.PAID, PayrollPeriodStatus.REVERSED],
   PAID: [PayrollPeriodStatus.LOCKED, PayrollPeriodStatus.REVERSED],
-  LOCKED: [PayrollPeriodStatus.CORRECTED],
+  LOCKED: [PayrollPeriodStatus.REVERSED],
   REVERSED: [],
   CORRECTED: [PayrollPeriodStatus.CALCULATED],
 };

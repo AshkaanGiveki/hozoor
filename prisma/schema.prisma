@@ -908,6 +908,7 @@ model PayrollPeriod {
   payrollPolicyId String?
   year Int
   month Int
+  revision Int @default(0)
   startDate DateTime
   endDate DateTime
   status PayrollPeriodStatus @default(DRAFT)
@@ -917,6 +918,10 @@ model PayrollPeriod {
   lockedAt DateTime?
   createdById String
   approvedById String?
+  correctionOfId String?
+  correctionReason String?
+  reversalReason String?
+  reversedAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   company CompanyProfile @relation(fields: [companyId], references: [id], onDelete: Cascade)
@@ -924,10 +929,12 @@ model PayrollPeriod {
   payrollPolicy PayrollPolicy? @relation(fields: [payrollPolicyId], references: [id], onDelete: Restrict)
   createdBy User @relation("PayrollPeriodCreator", fields: [createdById], references: [id], onDelete: Restrict)
   approvedBy User? @relation("PayrollPeriodApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  correctionOf PayrollPeriod? @relation("PayrollCorrection", fields: [correctionOfId], references: [id], onDelete: Restrict)
+  corrections PayrollPeriod[] @relation("PayrollCorrection")
   runs PayrollRun[]
   adjustments PayrollAdjustment[]
   payments PayrollPayment[]
-  @@unique([companyId, year, month])
+  @@unique([companyId, year, month, revision])
   @@index([companyId, status, startDate])
 }
 
