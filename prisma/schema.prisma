@@ -192,6 +192,7 @@ model CompanyProfile {
   payrollPayments      PayrollPayment[]
   payrollAdjustments   PayrollAdjustment[]
   payrollPolicies      PayrollPolicy[]
+  retentionPolicies    EvidenceRetentionPolicy[]
 }
 
 model CompanySetting {
@@ -241,6 +242,7 @@ model User {
   createdPayrollPeriods       PayrollPeriod[]       @relation("PayrollPeriodCreator")
   approvedPayrollPeriods      PayrollPeriod[]       @relation("PayrollPeriodApprover")
   confirmedPayrollPayments    PayrollPayment[]      @relation("PayrollPaymentConfirmer")
+  createdRetentionPolicies    EvidenceRetentionPolicy[]
 
   @@unique([companyId, username])
   @@index([companyId, role])
@@ -908,6 +910,24 @@ model ReportExport {
   createdBy      User           @relation(fields: [createdById], references: [id], onDelete: Restrict)
 
   @@unique([companyId, reportType, idempotencyKey])
+}
+
+model EvidenceRetentionPolicy {
+  id              String        @id @default(uuid())
+  companyId       String
+  evidenceType    String
+  retentionDays   Int
+  archiveAfterDays Int?
+  legalBasis      String
+  active          Boolean       @default(true)
+  createdById     String
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  company         CompanyProfile @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdBy       User           @relation(fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@unique([companyId, evidenceType])
+  @@index([companyId, active])
 }
 
 model SavedReportFilter {
