@@ -59,10 +59,11 @@ export async function calculatePayrollPeriod(periodId: string, companyId: string
   for (const employee of employees) {
     const compensation = await db.compensationProfile.findFirst({ where: { employeeId: employee.id, status: "ACTIVE", effectiveFrom: { lte: period.endDate }, OR: [{ effectiveTo: null }, { effectiveTo: { gt: period.startDate } }] }, orderBy: { effectiveFrom: "desc" } });
     if (!compensation) { missingCompensation.push(employee.employeeCode); continue; }
-    const days = await db.attendanceDay.findMany({ where: { employeeId: employee.id, date: { gte: period.startDate, lte: period.endDate } }, select: { date: true, validWorkMinutes: true, approvedOvertimeMinutes: true, status: true } });
+    const days = await db.attendanceDay.findMany({ where: { employeeId: employee.id, date: { gte: period.startDate, lte: period.endDate } }, select: { date: true, validWorkMinutes: true, approvedOvertimeMinutes: true, lateMinutes: true, earlyDepartureMinutes: true, deficitMinutes: true, leaveMinutes: true, status: true } });
     const adjustments = await db.payrollAdjustment.findMany({ where: { periodId, employeeId: employee.id, payrollRunId: null }, select: { id: true, code: true, label: true, amount: true, taxable: true, insurable: true, reason: true } });
     const workedDays = days.filter((day) => day.validWorkMinutes > 0).length;
     const overtimeMinutes = days.reduce((sum, day) => sum + day.approvedOvertimeMinutes, 0);
+    const attendanceSummary = { workedDays, absenceDays: days.filter((day) => day.status === "ABSENT").length, leaveDays: days.filter((day) => ["ON_LEAVE", "PARTIAL_LEAVE"].includes(day.status)).length, holidayDays: days.filter((day) => day.status === "HOLIDAY").length, validWorkMinutes: days.reduce((sum, day) => sum + day.validWorkMinutes, 0), overtimeMinutes, leaveMinutes: days.reduce((sum, day) => sum + day.leaveMinutes, 0), lateMinutes: days.reduce((sum, day) => sum + day.lateMinutes, 0), earlyDepartureMinutes: days.reduce((sum, day) => sum + day.earlyDepartureMinutes, 0), deficitMinutes: days.reduce((sum, day) => sum + day.deficitMinutes, 0) };
     const components = Array.isArray(compensation.components) ? compensation.components as unknown as Component[] : [];
     const base = money(compensation.baseSalary);
     if (rules.minimumMonthlySalary !== undefined && base.lessThan(rules.minimumMonthlySalary)) throw new Error(`COMPENSATION_BELOW_MINIMUM:${employee.employeeCode}`);
@@ -93,7 +94,7 @@ export async function calculatePayrollPeriod(periodId: string, companyId: string
       { type: "TAX" as const, code: "TAX", label: "Tax", amount: tax.neg(), sourceData: { rate: taxRate, base: taxable.toString() } },
       { type: "EMPLOYER_INSURANCE" as const, code: "EMPLOYER_INSURANCE", label: "Employer insurance", amount: employerInsurance, sourceData: { rate: employerInsuranceRate, base: insurable.toString() } },
     ];
-    calculations.push({ employeeId: employee.id, compensationProfileId: compensation.id, gross, taxable, insurable, employeeInsurance, employerInsurance, tax, net, lines, snapshot: { employeeId: employee.id, compensationProfileId: compensation.id, ruleSetId: period.ruleSetId, ruleSetChecksum: period.ruleSet.checksum, payrollPolicyId: period.payrollPolicyId, payrollPolicySettings: period.payrollPolicy?.settings ?? null, attendanceDayIds: days.map((day) => day.date.toISOString()), rules, source: "attendance-and-compensation" } });
+    calculations.push({ employeeId: employee.id, compensationProfileId: compensation.id, gross, taxable, insurable, employeeInsurance, employerInsurance, tax, net, lines, snapshot: { employeeId: employee.id, compensationProfileId: compensation.id, ruleSetId: period.ruleSetId, ruleSetChecksum: period.ruleSet.checksum, payrollPolicyId: period.payrollPolicyId, payrollPolicySettings: period.payrollPolicy?.settings ?? null, attendanceDayIds: days.map((day) => day.date.toISOString()), attendanceSummary, rules, source: "attendance-and-compensation" } });
   }
   if (missingCompensation.length) throw new Error(`MISSING_COMPENSATION:${missingCompensation.join(",")}`);
   await db.$transaction(async (tx) => {
