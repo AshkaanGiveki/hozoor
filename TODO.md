@@ -68,7 +68,7 @@ Each item must include server-side authorization, validation, UI coverage where 
 - [ ] Calculate ordinary wages, overtime, night work, Friday/holiday work, leave, absence, lateness, and early departure from actual source data.
 - [ ] Calculate taxable bases, tax exemptions/brackets, employee insurance, employer insurance, ceilings, and required deductions.
 - [ ] Calculate annual benefits, seniority-related amounts, end-of-service/severance accruals, and final settlement items where in scope.
-- [ ] Calculate official holidays from a versioned Persian-calendar holiday table.
+- [x] Calculate official holidays from a versioned Persian-calendar holiday table.
 - [x] Show the exact rule version and formula behind every calculated amount.
 - [x] Add warnings instead of silently guessing when a legal rule or employee input is missing.
 
