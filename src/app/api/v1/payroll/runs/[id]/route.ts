@@ -4,6 +4,7 @@ import { audit } from "@/server/audit";
 import { getCurrentUser } from "@/server/auth";
 import { db } from "@/server/db";
 import { canManagePayroll } from "@/server/payroll";
+import { canAccessEmployee } from "@/server/permissions";
 
 export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
   void request;
@@ -11,7 +12,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   if (!user) return NextResponse.json({ error: { code: "UNAUTHENTICATED", message: "Authentication required." } }, { status: 401 });
   const { id } = await context.params;
   const run = await db.payrollRun.findFirst({ where: { id, period: { companyId: user.companyId, status: { in: ["APPROVED", "PAID", "LOCKED"] } } }, include: { employee: { select: { id: true, employeeCode: true, firstName: true, lastName: true } }, period: { select: { id: true, year: true, month: true, status: true, ruleSet: { select: { name: true, version: true, checksum: true } } } }, lines: true, payment: true } });
-  if (!run || (!canManagePayroll(user.role) && user.role !== RoleCode.AUDITOR && run.employee.id !== user.employee?.id)) return NextResponse.json({ error: { code: "NOT_FOUND", message: "Payslip not found." } }, { status: 404 });
+  if (!run || (!canManagePayroll(user.role) && user.role !== RoleCode.AUDITOR && !(await canAccessEmployee(user, run.employee.id)))) return NextResponse.json({ error: { code: "NOT_FOUND", message: "Payslip not found." } }, { status: 404 });
   await audit({ companyId: user.companyId, actorId: user.id, action: "payroll.run.view", entityType: "PayrollRun", entityId: id, after: { employeeId: run.employee.id, periodId: run.period.id } });
   return NextResponse.json({ data: run });
 }
