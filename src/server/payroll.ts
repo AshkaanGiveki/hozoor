@@ -43,6 +43,13 @@ export function validateLegalRules(rules: unknown) {
   return null;
 }
 
+export function validateCompensationMinimum(baseSalary: number, rules: unknown) {
+  if (!rules || typeof rules !== "object" || Array.isArray(rules)) return null;
+  const minimum = (rules as { minimumMonthlySalary?: unknown }).minimumMonthlySalary;
+  if (typeof minimum !== "number" || !Number.isFinite(minimum)) return null;
+  return baseSalary < minimum ? `Compensation is below the approved minimum monthly salary of ${minimum}.` : null;
+}
+
 export function validateRuleSetApproval(sourceReference: string | null | undefined, rules: unknown) {
   if (!sourceReference?.trim()) return "An official source reference is required before approval.";
   return validateLegalRules(rules);

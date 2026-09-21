@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { audit } from "@/server/audit";
 import { db } from "@/server/db";
-import { canManagePayroll, hasCompensationOverlap, isValidDateRange } from "@/server/payroll";
+import { canManagePayroll, hasCompensationOverlap, isValidDateRange, validateCompensationMinimum } from "@/server/payroll";
 import { getCurrentUser } from "@/server/auth";
 
 const component = z.object({ code: z.string().trim().min(1).max(80), label: z.string().trim().min(1).max(160), type: z.enum(["ALLOWANCE", "BONUS", "COMMISSION", "BENEFIT", "OTHER_EARNING", "LOAN_REPAYMENT", "ADVANCE_REPAYMENT", "OTHER_DEDUCTION"]).default("ALLOWANCE"), amount: z.number().int().nonnegative(), taxable: z.boolean().default(true), insurable: z.boolean().default(true) });
@@ -28,6 +28,9 @@ export async function POST(request: Request) {
   const employee = await db.employee.findFirst({ where: { id: input.employeeId, companyId: user.companyId }, select: { id: true } });
   if (!employee) return NextResponse.json({ error: { code: "NOT_FOUND", message: "Employee not found." } }, { status: 404 });
   if (input.departmentId && !(await db.department.findFirst({ where: { id: input.departmentId, companyId: user.companyId }, select: { id: true } }))) return NextResponse.json({ error: { code: "NOT_FOUND", message: "Department not found." } }, { status: 404 });
+  const legalRuleSet = await db.payrollRuleSet.findFirst({ where: { companyId: user.companyId, status: "APPROVED", effectiveFrom: { lte: input.effectiveFrom } }, orderBy: { effectiveFrom: "desc" }, select: { rules: true } });
+  const minimumError = validateCompensationMinimum(input.baseSalary, legalRuleSet?.rules);
+  if (minimumError) return NextResponse.json({ error: { code: "COMPENSATION_BELOW_MINIMUM", message: minimumError } }, { status: 400 });
   if (await hasCompensationOverlap(input.employeeId, input.effectiveFrom, input.effectiveTo)) return NextResponse.json({ error: { code: "CONFLICT", message: "This compensation period overlaps an existing period." } }, { status: 409 });
   const created = await db.compensationProfile.create({ data: { companyId: user.companyId, employeeId: input.employeeId, createdById: user.id, status: input.status, effectiveFrom: input.effectiveFrom, effectiveTo: input.effectiveTo ?? null, contractStartDate, contractEndDate, departmentId: input.departmentId ?? null, contractType: input.contractType, jobTitle: input.jobTitle ?? null, payrollIdentifier: input.payrollIdentifier ?? null, baseSalary: input.baseSalary, dailyRate: input.dailyRate ?? null, hourlyRate: input.hourlyRate ?? null, components: input.components, taxStatus: input.taxStatus, insuranceStatus: input.insuranceStatus, bankAccountLast4: input.bankAccountLast4 ?? null, notes: input.notes ?? null } });
   await audit({ companyId: user.companyId, actorId: user.id, action: "payroll.compensation.create", entityType: "CompensationProfile", entityId: created.id, after: input });

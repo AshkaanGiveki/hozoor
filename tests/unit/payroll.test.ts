@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canApprovePayrollPeriod, canConfirmPayrollPayment, checksumRules, payrollPeriodTransitions, simulatePayrollPolicy, validateLegalRules, validatePayrollPolicy, validateRuleSetApproval } from "@/server/payroll";
+import { canApprovePayrollPeriod, canConfirmPayrollPayment, checksumRules, payrollPeriodTransitions, simulatePayrollPolicy, validateCompensationMinimum, validateLegalRules, validatePayrollPolicy, validateRuleSetApproval } from "@/server/payroll";
 import { isEarningComponent } from "@/server/payroll-engine";
 import { reconcilePayrollTotals, summarizePayrollRegister } from "@/server/payroll-reporting";
 import { Prisma } from "@prisma/client";
@@ -67,6 +67,12 @@ describe("payroll rule safety", () => {
   it("reconciles calculated, exported, and paid net totals", () => {
     const rows = [{ employeeId: "1", employeeCode: "E1", employeeName: "One", departmentId: null, departmentName: null, gross: new Prisma.Decimal(100), deductions: new Prisma.Decimal(10), net: new Prisma.Decimal(90), employerInsurance: new Prisma.Decimal(20), paid: new Prisma.Decimal(90), paymentStatus: "PAID" }];
     expect(reconcilePayrollTotals(rows, new Prisma.Decimal(90))).toEqual({ calculatedNet: "90", exportedNet: "90", paidNet: "90", unmatched: 0, exportMatchesCalculated: true });
+  });
+
+  it("rejects compensation below an approved minimum salary", () => {
+    expect(validateCompensationMinimum(9_000, { minimumMonthlySalary: 10_000 })).toContain("minimum monthly salary");
+    expect(validateCompensationMinimum(10_000, { minimumMonthlySalary: 10_000 })).toBeNull();
+    expect(validateCompensationMinimum(9_000, { taxRate: 0.1 })).toBeNull();
   });
 
   it("rejects legal overrides and simulates policy-only choices", () => {
