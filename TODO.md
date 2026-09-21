@@ -129,7 +129,7 @@ Each item must include server-side authorization, validation, UI coverage where 
 
 ## P2 â€” external integrations
 
-- [ ] Add a provider-neutral payroll integration interface.
+- [x] Add a provider-neutral payroll integration interface.
 - [ ] Add target-specific adapters only after the target systemâ€™s API/schema and authentication method are known.
 - [ ] Add tax, insurance, accounting, and bank integrations only with verified official/provider documentation.
 - [ ] Add idempotency, retries, failure queues, response storage, and integration audit history.

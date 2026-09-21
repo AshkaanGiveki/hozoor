@@ -4,11 +4,22 @@ import { isEarningComponent } from "@/server/payroll-engine";
 import { reconcilePayrollTotals, summarizePayrollRegister } from "@/server/payroll-reporting";
 import { Prisma } from "@prisma/client";
 import { buildAuditHash } from "@/server/audit";
+import { createPayrollIntegrationPayload } from "@/server/payroll-integration";
 
 describe("payroll rule safety", () => {
   it("changes the audit hash when chained audit content changes", () => {
     const base = { companyId: "c", action: "payroll.view", entityType: "PayrollRun", entityId: "r", previousHash: null, createdAt: new Date("2026-01-01T00:00:00.000Z") };
     expect(buildAuditHash({ ...base, after: { net: "100" } })).not.toBe(buildAuditHash({ ...base, after: { net: "101" } }));
+  });
+
+  it("builds a deterministic provider-neutral payroll payload", () => {
+    const row = { employeeId: "e1", employeeCode: "E1", grossAmount: new Prisma.Decimal(100), totalDeductions: new Prisma.Decimal(10), netPayable: new Prisma.Decimal(90), employeeInsurance: new Prisma.Decimal(7), employerInsurance: new Prisma.Decimal(23), payment: { amount: new Prisma.Decimal(90), status: "PAID" } };
+    const input = { companyId: "c1", period: { id: "p1", year: 1405, month: 1, revision: 1, status: "PAID" }, rows: [row] };
+    const first = createPayrollIntegrationPayload(input);
+    const second = createPayrollIntegrationPayload(input);
+    expect(first).toEqual(second);
+    expect(first.totals).toEqual({ gross: "100", deductions: "10", netPayable: "90", employerInsurance: "23" });
+    expect(first.idempotencyKey).toBe("payroll:c1:p1");
   });
   it("requires a separate reviewer and an explicit review state", () => {
     expect(canApprovePayrollPeriod("IN_REVIEW", "creator", "reviewer")).toBe(true);
