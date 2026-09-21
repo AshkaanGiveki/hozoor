@@ -30,7 +30,7 @@ Primary legal sources supplied for this implementation are the [Iranian Labour L
 1. Obtain the current official publications and record the issuing authority, publication identifier, effective dates, and retrieval date in `sourceReference` and the rule-set audit trail.
 2. Enter the values as a new versioned draft. Never edit an approved rule set in place.
 3. Run deterministic fixtures and boundary tests for the rule version.
-4. Have an authorized payroll/accounting reviewer validate the values and approve the rule set. The API rejects approval without a source reference or complete required values.
+4. Have an authorized accounting reviewer and a different legal reviewer validate the values in order. The API requires `DRAFT → ACCOUNTING_REVIEWED → LEGAL_REVIEWED → APPROVED`, rejects approval without a source reference or complete required values, and stores each reviewer identity.
 5. Create a new rule version for every annual change, calculate only periods that reference that version, and retain the old version for historical reproducibility.
 6. Obtain independent legal/accounting review before enabling production payroll for a new jurisdictional scope.
 
