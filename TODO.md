@@ -25,6 +25,7 @@ This backlog tracks the product capabilities being implemented in priority order
 - [ ] Add email/SMS delivery adapters
 - [x] Add automated device synchronization hook
 - [x] Add payroll-ready integration export interface
+- [x] Add provider-neutral authenticated payroll webhook dispatcher with explicit provider acceptance
 - [ ] Add target-specific payroll/HR adapters and outbound webhooks
 - [x] Add public API documentation
 
