@@ -5,6 +5,7 @@ import { reconcilePayrollTotals, summarizePayrollRegister } from "@/server/payro
 import { Prisma } from "@prisma/client";
 import { buildAuditHash, verifyAuditChain } from "@/server/audit";
 import { createPayrollIntegrationPayload } from "@/server/payroll-integration";
+import { resolveIntegrationSubmissionOutcome } from "@/server/payroll-integration";
 
 describe("payroll rule safety", () => {
   it("changes the audit hash when chained audit content changes", () => {
@@ -30,6 +31,13 @@ describe("payroll rule safety", () => {
     expect(first).toEqual(second);
     expect(first.totals).toEqual({ gross: "100", deductions: "10", netPayable: "90", employerInsurance: "23" });
     expect(first.idempotencyKey).toBe("payroll:c1:p1");
+  });
+
+  it("keeps unaccepted integration submissions retryable and never successful", () => {
+    const now = new Date("2026-01-01T00:00:00.000Z");
+    expect(resolveIntegrationSubmissionOutcome(false, 1, 5, now)).toEqual({ status: "RETRYING", nextAttemptAt: new Date("2026-01-01T00:01:00.000Z") });
+    expect(resolveIntegrationSubmissionOutcome(false, 5, 5, now)).toEqual({ status: "FAILED", nextAttemptAt: null });
+    expect(resolveIntegrationSubmissionOutcome(true, 1, 5, now)).toEqual({ status: "SUCCEEDED", nextAttemptAt: null });
   });
   it("requires a separate reviewer and an explicit review state", () => {
     expect(canApprovePayrollPeriod("IN_REVIEW", "creator", "reviewer")).toBe(true);

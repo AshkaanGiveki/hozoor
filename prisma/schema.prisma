@@ -139,6 +139,14 @@ enum PayrollPaymentStatus {
   REVERSED
 }
 
+enum IntegrationSubmissionStatus {
+  QUEUED
+  PROCESSING
+  RETRYING
+  SUCCEEDED
+  FAILED
+}
+
 enum LedgerType {
   OPENING
   ACCRUAL
@@ -193,6 +201,7 @@ model CompanyProfile {
   payrollAdjustments   PayrollAdjustment[]
   payrollPolicies      PayrollPolicy[]
   retentionPolicies    EvidenceRetentionPolicy[]
+  integrationSubmissions IntegrationSubmission[]
 }
 
 model CompanySetting {
@@ -243,6 +252,7 @@ model User {
   approvedPayrollPeriods      PayrollPeriod[]       @relation("PayrollPeriodApprover")
   confirmedPayrollPayments    PayrollPayment[]      @relation("PayrollPaymentConfirmer")
   createdRetentionPolicies    EvidenceRetentionPolicy[]
+  integrationSubmissions       IntegrationSubmission[]
 
   @@unique([companyId, username])
   @@index([companyId, role])
@@ -933,6 +943,31 @@ model EvidenceRetentionPolicy {
 
   @@unique([companyId, evidenceType])
   @@index([companyId, active])
+}
+
+model IntegrationSubmission {
+  id               String                    @id @default(uuid())
+  companyId        String
+  createdById      String
+  integrationType  String
+  adapterName      String
+  idempotencyKey   String
+  status           IntegrationSubmissionStatus @default(QUEUED)
+  attemptCount     Int                       @default(0)
+  maxAttempts      Int                       @default(5)
+  nextAttemptAt    DateTime?
+  requestPayload   Json
+  responsePayload  Json?
+  externalReference String?
+  lastError        String?
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
+  submittedAt      DateTime?
+  company          CompanyProfile            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdBy        User                      @relation(fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@unique([companyId, adapterName, idempotencyKey])
+  @@index([companyId, status, nextAttemptAt])
 }
 
 model SavedReportFilter {
