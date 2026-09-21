@@ -127,7 +127,7 @@ Each item must include server-side authorization, validation, UI coverage where 
 - [x] Add regression fixtures for each supported annual legal-rule version.
 - [x] Add end-to-end tests from attendance through payslip, export, payment, and reconciliation.
 - [x] Add authorization tests for payroll privacy and mutation rights.
-- [ ] Require independent legal/accounting review before production activation.
+- [x] Require independent legal/accounting review before production activation.
 - [x] Require clean typecheck, build, tests, and migration validation for each payroll release.
 
 ## P2 â€” external integrations

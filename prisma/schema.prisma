@@ -97,6 +97,8 @@ enum CompensationStatus {
 
 enum PayrollRuleStatus {
   DRAFT
+  ACCOUNTING_REVIEWED
+  LEGAL_REVIEWED
   APPROVED
   RETIRED
 }
@@ -240,6 +242,8 @@ model User {
   notifications               Notification[]
   createdCompensationProfiles CompensationProfile[]
   createdPayrollRuleSets      PayrollRuleSet[]      @relation("PayrollRuleCreator")
+  accountingReviewedRuleSets  PayrollRuleSet[]      @relation("PayrollRuleAccountingReviewer")
+  legalReviewedRuleSets       PayrollRuleSet[]      @relation("PayrollRuleLegalReviewer")
   approvedPayrollRuleSets     PayrollRuleSet[]      @relation("PayrollRuleApprover")
   createdPayrollPolicies      PayrollPolicy[]
   auditLogs                   AuditLog[]
@@ -1031,11 +1035,15 @@ model PayrollRuleSet {
   rules           Json
   checksum        String
   createdById     String
+  accountingReviewedById String?
+  legalReviewedById String?
   approvedById    String?
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   company         CompanyProfile    @relation(fields: [companyId], references: [id], onDelete: Cascade)
   createdBy       User              @relation("PayrollRuleCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  accountingReviewedBy User?        @relation("PayrollRuleAccountingReviewer", fields: [accountingReviewedById], references: [id], onDelete: SetNull)
+  legalReviewedBy      User?        @relation("PayrollRuleLegalReviewer", fields: [legalReviewedById], references: [id], onDelete: SetNull)
   approvedBy      User?             @relation("PayrollRuleApprover", fields: [approvedById], references: [id], onDelete: SetNull)
   payrollPeriods  PayrollPeriod[]
 

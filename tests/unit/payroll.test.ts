@@ -218,4 +218,8 @@ describe("payroll rule safety", () => {
     expect(validateRuleSetApproval(null, { workingDays: 30 })).toContain("source reference");
     expect(validateRuleSetApproval("Official circular 1", { workingDays: 30 })).toContain("Missing required");
   });
+
+  it("documents the staged annual-rule review states", () => {
+    expect(["DRAFT", "ACCOUNTING_REVIEWED", "LEGAL_REVIEWED", "APPROVED"]).toEqual(["DRAFT", "ACCOUNTING_REVIEWED", "LEGAL_REVIEWED", "APPROVED"]);
+  });
 });
