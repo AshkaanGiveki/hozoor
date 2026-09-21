@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { canApprovePayrollPeriod, canConfirmPayrollPayment, checksumRules, maskBankAccountLast4, payrollPeriodTransitions, simulatePayrollPolicy, validateCompensationMinimum, validateLegalRules, validatePayrollPolicy, validateRuleSetApproval } from "@/server/payroll";
+import { canApprovePayrollPeriod, canConfirmPayrollPayment, canManagePayroll, checksumRules, maskBankAccountLast4, payrollPeriodTransitions, simulatePayrollPolicy, validateCompensationMinimum, validateLegalRules, validatePayrollPolicy, validateRuleSetApproval } from "@/server/payroll";
 import { calculateOvertimePay, calculateProgressiveTax, capInsurableBase, isEarningComponent, roundPayrollAmount } from "@/server/payroll-engine";
 import { reconcilePayrollTotals, summarizePayrollRegister } from "@/server/payroll-reporting";
-import { Prisma } from "@prisma/client";
+import { Prisma, RoleCode } from "@prisma/client";
 import { buildAuditHash, verifyAuditChain } from "@/server/audit";
 import { createPayrollIntegrationPayload } from "@/server/payroll-integration";
 import { resolveIntegrationSubmissionOutcome } from "@/server/payroll-integration";
+import { canReadAll } from "@/server/permissions";
 
 describe("payroll rule safety", () => {
   it("changes the audit hash when chained audit content changes", () => {
@@ -56,6 +57,19 @@ describe("payroll rule safety", () => {
     expect(canConfirmPayrollPayment("payment-user", "creator", null)).toBe(false);
   });
 
+  it("enforces payroll mutation and privacy boundaries by role", () => {
+    expect(canManagePayroll(RoleCode.ADMIN)).toBe(true);
+    expect(canManagePayroll(RoleCode.HR_ADMIN)).toBe(true);
+    expect(canManagePayroll(RoleCode.AUDITOR)).toBe(false);
+    expect(canManagePayroll(RoleCode.MANAGER)).toBe(false);
+    expect(canManagePayroll(RoleCode.EMPLOYEE)).toBe(false);
+    expect(canReadAll({ role: RoleCode.ADMIN })).toBe(true);
+    expect(canReadAll({ role: RoleCode.HR_ADMIN })).toBe(true);
+    expect(canReadAll({ role: RoleCode.AUDITOR })).toBe(true);
+    expect(canReadAll({ role: RoleCode.MANAGER })).toBe(false);
+    expect(canReadAll({ role: RoleCode.EMPLOYEE })).toBe(false);
+  });
+
   it("rejects incomplete legal rules", () => {
     expect(validateLegalRules({ workingDays: 30 })).toContain("Missing required");
   });
@@ -100,6 +114,9 @@ describe("payroll rule safety", () => {
     expect(calculateOvertimePay(new Prisma.Decimal(120), 30, 1.4)).toEqual(new Prisma.Decimal(84));
     expect(capInsurableBase(new Prisma.Decimal(150), 100)).toEqual(new Prisma.Decimal(100));
     expect(calculateProgressiveTax(new Prisma.Decimal(150), { taxExemption: 50, taxBrackets: [{ upTo: 100, rate: 0.1 }, { rate: 0.2 }] })).toEqual(new Prisma.Decimal(10));
+    expect(calculateProgressiveTax(new Prisma.Decimal(50), { taxExemption: 50, taxBrackets: [{ upTo: 100, rate: 0.1 }] })).toEqual(new Prisma.Decimal(0));
+    expect(calculateOvertimePay(new Prisma.Decimal(120), 0, 1.4)).toEqual(new Prisma.Decimal(0));
+    expect(capInsurableBase(new Prisma.Decimal(99), 100)).toEqual(new Prisma.Decimal(99));
   });
 
   it("masks sensitive bank account suffixes at the response boundary", () => {

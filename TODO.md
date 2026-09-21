@@ -119,13 +119,13 @@ Each item must include server-side authorization, validation, UI coverage where 
 
 ## P1 â€” testing and legal safety
 
-- [ ] Add deterministic unit tests for every payroll formula and rounding rule.
+- [x] Add deterministic unit tests for every payroll formula and rounding rule.
 - [ ] Add boundary tests for minimum wage, tax thresholds, insurance ceilings, month lengths, leap years, holidays, and partial employment.
 - [ ] Add regression fixtures for each supported annual legal-rule version.
 - [ ] Add end-to-end tests from attendance through payslip, export, payment, and reconciliation.
-- [ ] Add authorization tests for payroll privacy and mutation rights.
+- [x] Add authorization tests for payroll privacy and mutation rights.
 - [ ] Require independent legal/accounting review before production activation.
-- [ ] Require clean typecheck, build, tests, and migration validation for each payroll release.
+- [x] Require clean typecheck, build, tests, and migration validation for each payroll release.
 
 ## P2 â€” external integrations
 
